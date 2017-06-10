@@ -28,7 +28,6 @@
         searchOption: true,
         minCharacters: 3,
         maxTags: -1,
-        closeOnBlur: true,
         items: [],
         choices: [],
         classes: {
@@ -46,8 +45,10 @@
             listWrapper: 'tags-input__multi-wrapper',
             multiselectInput: 'tags-input__input--multi'
         },
-        key: 'key',
-        value: 'value'
+        key: 'id',
+        value: 'name',
+        searchBy: 'value',
+        fromServer: false
     };
 
     extend = function (obj1, obj2) {
@@ -84,7 +85,7 @@
     }());
 
     function TagsInput(element, userOptions) {
-        var elements, i, e1, e0;
+        var elements, i, e1;
         if (typeof element === 'string') {
             elements = document.querySelectorAll(element);
             if (elements.length > 1) {
@@ -94,28 +95,30 @@
                     new TagsInput(e1, userOptions);
                 }
             }
-            e0 = elements[0];
+            element = elements[0];
         } else {
-            e0 = element;
+            element = element;
         }
-        if (e0 && e0.dataset.tagsId) {
-            return allInitializedElements[e0.dataset.tagsId];
+        if (element && element.dataset.tagsId) {
+            return allInitializedElements[element.dataset.tagsId];
         }
-        e0.dataset.tagsId = tagsIdentityCount;
+        element.dataset.tagsId = tagsIdentityCount;
         userOptions = userOptions || {};
         this.highlightPosition = -1;
         this.config = extend(defaultOptions, userOptions);
         this.element = typeof element === 'string' ? document.querySelector(element) : element;
-        this.type = element.dataset.type;
+        this.type = element.dataset.tagsType;
         this.isListVisible = false;
         this.prevText = '';
         this.selectedItems = [];
         this.data = [];
+        this.isListPopulated = false;
         this.currentTimerId = null;
         this.init();
     }
 
     TagsInput.prototype.init = init;
+    TagsInput.prototype.getValues = getValues;
     TagsInput.prototype._render = _render;
     TagsInput.prototype._clearList = _clearList;
     TagsInput.prototype._createTemplates = _createTemplates;
@@ -137,7 +140,7 @@
     TagsInput.prototype._clearInput = _clearInput;
     TagsInput.prototype._searchList = _searchList;
     TagsInput.prototype._removeInput = _removeInput;
-    TagsInput.prototype.getValues = getValues;
+
 
     function _createTemplates() {
         var classes = this.config.classes;
@@ -147,46 +150,46 @@
                     .replace('%CONTAINER_CLASS%', classes.container));
             },
             wrapper: function () {
-                return strToEl('<div class="%WRAPPER_CLASS%" data-element="item-wrapper"></div>'
+                return strToEl('<div class="%WRAPPER_CLASS%" data-tags-element="item-wrapper"></div>'
                     .replace('%WRAPPER_CLASS%', classes.wrapper));
             },
             selectDisplay: function () {
-                return strToEl('<div class="%SINGLE_SELECT_ITEM_CLASS%" data-element="display-holder">%PLACEHOLDER%</div>'
+                return strToEl('<div class="%SINGLE_SELECT_ITEM_CLASS%" data-tags-element="display-holder">%PLACEHOLDER%</div>'
                     .replace('%SINGLE_SELECT_ITEM_CLASS%', classes.selectDisplay)
                     .replace('%PLACEHOLDER%', this.config.placeholder));
             },
             input: function (placeholder, inputClass) {
                 inputClass = inputClass || classes.input;
-                return strToEl('<input class="%INPUT_CLASS%" data-element="input" placeholder="%PLACEHOLDER%" />'
+                return strToEl('<input class="%INPUT_CLASS%" data-tags-element="input" placeholder="%PLACEHOLDER%" />'
                     .replace('%INPUT_CLASS%', inputClass)
                     .replace('%PLACEHOLDER%', placeholder));
             },
             list: function () {
-                return strToEl('<ul class="%LIST_CLASS%" data-element="list"></ul>'
+                return strToEl('<ul class="%LIST_CLASS%" data-tags-element="list"></ul>'
                     .replace('%LIST_CLASS%', classes.list));
             },
             listItem: function (index, key, value) {
-                return strToEl('<li class="%OPTION_CLASS%" data-element="option" data-index="%INDEX%" data-key="%KEY%" data-value="%VALUE%">%VALUE%</li>'
+                return strToEl('<li class="%OPTION_CLASS%" data-tags-element="option" data-index="%INDEX%" data-key="%KEY%" data-value="%VALUE%">%VALUE%</li>'
                     .replace('%OPTION_CLASS%', classes.option)
                     .replace('%INDEX%', index)
                     .replace('%KEY%', key)
                     .replace(/%VALUE%/g, value));
             },
             listWrapper: function () {
-                return strToEl('<div class="%MULTI_WRAPPER_CLASS%" data-element="multiselect-wrapper"></div>'
+                return strToEl('<div class="%MULTI_WRAPPER_CLASS%" data-tags-element="multiselect-wrapper"></div>'
                     .replace('%MULTI_WRAPPER_CLASS%', classes.listWrapper))
             },
             selectedItemWrapper: function () {
                 return strToEl('<span class="%ITEM_WRAPPER_CLASS%"></span>'.replace('%ITEM_WRAPPER_CLASS%', classes.itemWrapper));
             },
             selectedItem: function (key, value) {
-                return strToEl('<span class="%ITEM_CLASS%" data-key="%KEY%" data-element="selected-item">%VALUE%</span>'
+                return strToEl('<span class="%ITEM_CLASS%" data-key="%KEY%" data-tags-element="selected-item">%VALUE%</span>'
                     .replace('%ITEM_CLASS%', classes.selectedItem)
                     .replace(/%KEY%/g, key)
                     .replace(/%VALUE%/g, value));
             },
             removeIcon: function () {
-                return strToEl('<span class="%REMOVE_ITEM_CLASS%" data-element="remove-item">X</span>'
+                return strToEl('<span class="%REMOVE_ITEM_CLASS%" data-tags-element="remove-item">X</span>'
                     .replace('%REMOVE_ITEM_CLASS%', classes.removeIcon));
             }
         };
@@ -201,15 +204,19 @@
     }
 
     function _render(isFilter) {
-        var data, list, keyAttr, valAttr, itemEl, isListWrapperPresent, d, listWrapper, input;
+        var data, list, keyAttr, valAttr, itemEl, isListWrapperPresent, d, listWrapper, input, attributeToBeUsed;
 
         list = this._getTemplate('list');
         keyAttr = this.config.key;
         valAttr = this.config.value;
-
+        if (this.config.searchBy === 'key') {
+            attributeToBeUsed = keyAttr;
+        } else {
+            attributeToBeUsed = valAttr;
+        }
         if (isFilter) {
             data = this.data.filter(function (item) {
-                return item[valAttr].toString().toLowerCase().indexOf(this.prevText) !== -1;
+                return item[attributeToBeUsed].toString().toLowerCase().indexOf(this.prevText) !== -1;
             }.bind(this));
         } else {
             data = this.data;
@@ -218,7 +225,7 @@
             data.forEach(function (item, index) {
                 if (typeof item[keyAttr] === 'string' && typeof item[valAttr] === 'string') {
                     itemEl = this._getTemplate('listItem', index, item[keyAttr], item[valAttr]);
-                    if (_isItemPresentInList(item, this.selectedItems, 'key')) {
+                    if (_isItemPresentInList(item, this.selectedItems, this.config.key, 'key')) {
                         itemEl.classList.add(this.config.classes.optionSelected);
                     }
                     itemEl.addEventListener('mouseover', _handleMouseOver.bind(this));
@@ -229,7 +236,7 @@
             }.bind(this));
             isListWrapperPresent = true;
             d = document.createDocumentFragment();
-            listWrapper = this.container.querySelector('[data-element="multiselect-wrapper"]');
+            listWrapper = this.container.querySelector('[data-tags-element="multiselect-wrapper"]');
             if (!listWrapper) {
                 listWrapper = this._getTemplate('listWrapper');
                 isListWrapperPresent = false;
@@ -247,7 +254,7 @@
                 this.container.appendChild(d);
             }
             if (this.type === 'multi-select' && this.config.searchOption) {
-                listWrapper.querySelector('[data-element="input"]').focus();
+                listWrapper.querySelector('[data-tags-element="input"]').focus();
             }
             this.isListVisible = true;
         }
@@ -260,17 +267,17 @@
             clearInterval(this.currentTimerId);
         }
         if (isMultiSearch) {
-            list = this.container.querySelector('[data-element="list"]');
+            list = this.container.querySelector('[data-tags-element="list"]');
         }
         else {
-            list = this.container.querySelector('[data-element="multiselect-wrapper"]');
+            list = this.container.querySelector('[data-tags-element="multiselect-wrapper"]');
         }
         if (list) {
             list.parentElement.removeChild(list);
         }
-        if (this.type === 'text') {
-            this.data = [];
-        }
+        // if (this.type === 'autocomplete') {
+        //     this.data = [];
+        // }
         this.highlightPosition = -1;
     }
 
@@ -284,10 +291,14 @@
         isTextSame = currentValue === prevValue;
         this.prevText = currentValue;
         if (!isTextSame) {
-            if (this.type === 'text') {
+            if (this.type === 'autocomplete') {
                 this._clearList();
                 if (currentValue.length >= this.config.minCharacters) {
-                    this._populateList();
+                    if (!this.isListPopulated || this.config.fromServer) {
+                        this._populateList();
+                    } else if (!this.config.fromServer) {
+                        this._render(true);
+                    }
                 }
             } else if (this.type === 'single-select' || this.type === 'multi-select') {
                 if (this.type === 'single-select' && !this.prevText) {
@@ -343,7 +354,7 @@
 
     function _handleEnter() {
         if (this.highlightPosition == -1) {
-            if (this.type === 'text') {
+            if (this.type === 'autocomplete') {
                 this._clearList();
                 this._populateList();
             }
@@ -355,7 +366,7 @@
     function _handleUpArrow() {
         var $listOptions;
         if (this.isListVisible) {
-            $listOptions = this.container.querySelectorAll('[data-element="option"]');
+            $listOptions = this.container.querySelectorAll('[data-tags-element="option"]');
             if (this.highlightPosition <= 0) {
                 this.highlightPosition = $listOptions.length - 1;
             } else {
@@ -368,7 +379,7 @@
     function _handleDownArrow() {
         var $listOptions;
         if (this.isListVisible) {
-            $listOptions = this.container.querySelectorAll('[data-element="option"]');
+            $listOptions = this.container.querySelectorAll('[data-tags-element="option"]');
             if (this.highlightPosition < $listOptions.length - 1) {
                 this.highlightPosition += 1;
             } else {
@@ -397,7 +408,7 @@
         var target, $list;
         target = e.target;
         if (this.container) {
-            $list = this.container.querySelector('[data-element="list"]');
+            $list = this.container.querySelector('[data-tags-element="list"]');
             if ($list) {
                 if (!this.container.contains(target)) {
                     this._clearList();
@@ -413,7 +424,11 @@
     function _handleInputFocus(e) {
         if (!this.isListVisible) {
             if ((this.config.maxTags > 0 && this.selectedItems.length < this.config.maxTags) || this.maxTags === -1 || this.type === 'single-select') {
-                this._populateList();
+                if (!this.isListPopulated)
+                    this._populateList();
+                else {
+                    this._render();
+                }
             }
         }
     }
@@ -421,7 +436,7 @@
     function _handleMultiSelectFocus(e) {
         var target, data_element;
         target = e.target;
-        data_element = target.dataset.element;
+        data_element = target.dataset.tagsElement;
         if (data_element && (data_element === 'item-wrapper' || data_element === 'display-holder')) {
             _handleInputFocus.call(this, e);
         }
@@ -429,7 +444,7 @@
 
     function _clearInput() {
         var $input;
-        $input = this.container.querySelector('[data-element="input"]');
+        $input = this.container.querySelector('[data-tags-element="input"]');
         if ($input) {
             if (this.type !== 'single-select' || this.selectedItems.length < 1) {
                 $input.value = '';
@@ -443,7 +458,7 @@
 
     function _hightlightElement(isKeyPressed) {
         var $listElement, classes, highlightedClass, highlightedClassSelector, $listItems, $prevSelectedItem, $selectedItem;
-        $listElement = this.container.querySelector('[data-element="list"]');
+        $listElement = this.container.querySelector('[data-tags-element="list"]');
         classes = this.config.classes;
         highlightedClass = classes.optionHighlight;
         highlightedClassSelector = '.' + highlightedClass;
@@ -466,7 +481,7 @@
         classes = this.config.classes;
         optionSelectedClass = classes.optionSelected;
         optionSelectedClassSelector = '.' + optionSelectedClass;
-        $listElement = this.container.querySelector('[data-element="list"]');
+        $listElement = this.container.querySelector('[data-tags-element="list"]');
         $listItems = $listElement.children;
         $selectedItem = $listItems[this.highlightPosition];
         value, key;
@@ -499,12 +514,12 @@
             console.error('Items exceed than maximum allowed items');
             return false;
         }
-        $input = this.container.querySelector('[data-element="input"]');
-        if (!_isItemPresentInList(selectedItem, items, 'key')) {
+        $input = this.container.querySelector('[data-tags-element="input"]');
+        if (!_isItemPresentInList(selectedItem, items, this.config.key, 'key')) {
             items.push(selectedItem);
             if (this.type !== 'single-select') {
                 if (this.type === 'multi-select') {
-                    $displayHolder = this.container.querySelector("[data-element='display-holder']");
+                    $displayHolder = this.container.querySelector("[data-tags-element='display-holder']");
                     if ($displayHolder) {
                         $displayHolder.parentElement.removeChild($displayHolder);
                     }
@@ -515,8 +530,8 @@
                 $spanWrapper.appendChild($span);
                 $spanWrapper.appendChild($remove);
                 $remove.addEventListener('click', _handleRemoveElement.bind(this));
-                $wrapper = this.container.querySelector('[data-element="item-wrapper"]');
-                $input = $wrapper.querySelector('[data-element="input"]');
+                $wrapper = this.container.querySelector('[data-tags-element="item-wrapper"]');
+                $input = $wrapper.querySelector('[data-tags-element="input"]');
                 if ($input) {
                     $wrapper.insertBefore($spanWrapper, $input);
                 } else {
@@ -540,7 +555,7 @@
 
     function _removeInput() {
         var $input;
-        $input = this.container.querySelector('[data-element="input"]');
+        $input = this.container.querySelector('[data-tags-element="input"]');
         if ($input) {
             $input.parentElement.removeChild($input);
         }
@@ -548,14 +563,14 @@
 
     function _handleRemoveElement(e) {
         var element, key;
-        element = e.currentTarget.parentElement.querySelector('[data-element="selected-item"]');
+        element = e.currentTarget.parentElement.querySelector('[data-tags-element="selected-item"]');
         key = element.dataset.key;
         this._removeElement(key);
     }
 
     function _removeElement(key) {
         var $selectedItems, i, j, $item, $itemWrapper, index, $el, item;
-        $selectedItems = this.container.querySelectorAll('[data-element="selected-item"]');
+        $selectedItems = this.container.querySelectorAll('[data-tags-element="selected-item"]');
         if ($selectedItems) {
             j = 0;
             $item;
@@ -581,7 +596,7 @@
                 if (index !== -1) {
                     this.selectedItems.splice(index, 1);
                 }
-                if (this.type !== 'multi-select' && this.config.maxTags > 0 && this.selectedItems.length < this.config.maxTags && !this.container.querySelector('[data-element="input"]')) {
+                if (this.type !== 'multi-select' && this.config.maxTags > 0 && this.selectedItems.length < this.config.maxTags && !this.container.querySelector('[data-tags-element="input"]')) {
                     this._createInput();
                 }
                 else if (this.type === 'multi-select' && this.selectedItems.length === 0) {
@@ -591,13 +606,13 @@
         }
     }
 
-    function _isItemPresentInList(item, list, key) {
+    function _isItemPresentInList(item, list, keyForItem, keyForList) {
         var index, element;
         if (list) {
             index = 0;
             for (; index < list.length; index++) {
                 element = list[index];
-                if (element[key] === item[key]) {
+                if (item[keyForItem] === element[keyForList]) {
                     return true;
                 }
             }
@@ -624,7 +639,7 @@
             isNewDisplayWrapper = false;
             wrapper = this.container.children[0];
         }
-        placeholder = this.type === 'text' ? this.config.placeholderSearch : this.config.placeholder;
+        placeholder = this.type === 'autocomplete' ? this.config.placeholderSearch : this.config.placeholder;
         if (this.type !== 'multi-select') {
             input = this._getTemplate('input', placeholder);
             input.addEventListener('keyup', _handleInputChange.bind(this));
@@ -645,30 +660,33 @@
     }
 
     function _populateList() {
-        var wait, val, timer, promiseToResolve;
+        var wait, val, timer, promiseToResolve, fromServer;
         wait = 0;
-        if (this.type === 'text') {
+        fromServer = this.config.fromServer;
+        if (this.config.fromServer) {
             wait = this.config.debounce;
+            val = this.prevText;
         }
-        val = this.prevText;
-        this.currentTimerId = setTimeout(function _populateListTimeout() {
-            if (typeof this.config.choices === 'object') {
-                this.data = this.config.choices;
-                this._render();
-            } else if (typeof this.config.choices === 'function') {
+        if (typeof this.config.choices === 'object' && !fromServer) {
+            this.data = this.config.choices;
+            this.isListPopulated = true;
+            this._render(true);
+        } else if (typeof this.config.choices === 'function') {
+            this.currentTimerId = setTimeout(function _populateListTimeout() {
                 promiseToResolve = this.config.choices(val);
                 promiseToResolve
                     .then(function (data) {
                         if (timer === this.currentTimerId) {
                             this.data = data;
-                            this._render();
+                            this.isListPopulated = true;
+                            this._render(!fromServer && !this.type === 'autocomplete');
                         }
                     }.bind(this)).catch(function (error) {
                         console.error(error);
                     });
-            }
-        }.bind(this), wait);
-        timer = this.currentTimerId;
+            }.bind(this), wait);
+            timer = this.currentTimerId;
+        }
     }
 
     function getValues(isWholeObjectRequested) {
@@ -685,15 +703,20 @@
     }
 
     function init() {
-        var items, key, value;
+        var items, key, value, typeofChoices;
         if (!this.type) {
             console.error('Please Enter Type In Element');
             return;
         }
 
-        if (typeof this.config.choices !== 'function' && typeof this.config.choices !== 'object') {
+        typeofChoices = typeof this.config.choices;
+        if (typeofChoices !== 'function' && typeofChoices !== 'object') {
             console.error('Please give choices: Promise or List');
             return;
+        }
+
+        if (this.config.fromServer && typeofChoices !== 'function' && this.type === 'autocomplete') {
+            console.error('Choices must be a promise when fromserver is true');
         }
 
         if (this.type === 'single-select') {
