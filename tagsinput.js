@@ -37,7 +37,9 @@
             selectedItem: 'tags-input__item',
             selectDisplay: 'tags-input__display',
             removeIcon: 'tags-input__item__remove',
-            itemWrapper: 'tags-input__item-wrapper'
+            itemWrapper: 'tags-input__item-wrapper',
+            listWrapper: 'tags-input__multi-wrapper',
+            multiselectInput: 'tags-input__input--multi'
         },
         key: 'key',
         value: 'value'
@@ -143,9 +145,10 @@
                 return strToEl('<div class="%SINGLE_SELECT_ITEM_CLASS%" data-element="display-holder">Select</div>'
                     .replace('%SINGLE_SELECT_ITEM_CLASS%', classes.selectDisplay));
             },
-            input: function (placeholder) {
+            input: function (placeholder, inputClass) {
+                inputClass = inputClass || classes.input;
                 return strToEl('<input class="%INPUT_CLASS%" data-element="input" placeholder="%PLACEHOLDER%" />'
-                    .replace('%INPUT_CLASS%', classes.input)
+                    .replace('%INPUT_CLASS%', inputClass)
                     .replace('%PLACEHOLDER%', placeholder));
             },
             list: function () {
@@ -158,6 +161,10 @@
                     .replace('%INDEX%', index)
                     .replace('%KEY%', key)
                     .replace(/%VALUE%/g, value));
+            },
+            listWrapper: function () {
+                return strToEl('<div class="%MULTI_WRAPPER_CLASS%" data-element="multiselect-wrapper"></div>'
+                    .replace('%MULTI_WRAPPER_CLASS%', classes.listWrapper))
             },
             selectedItemWrapper: function () {
                 return strToEl('<span class="%ITEM_WRAPPER_CLASS%"></span>'.replace('%ITEM_WRAPPER_CLASS%', classes.itemWrapper));
@@ -208,21 +215,46 @@
                     list.appendChild(itemEl);
                 }
             }.bind(this));
+            var isListWrapperPresent = true;
             var d = document.createDocumentFragment();
-            d.appendChild(list);
-            this.container.appendChild(d);
+            var listWrapper = this.container.querySelector('[data-element="multiselect-wrapper"]');
+            if (!listWrapper) {
+                listWrapper = this._getTemplate('listWrapper');
+                var isListWrapperPresent = false;
+            }
+            if (this.type === 'multi-select') {
+                if (!isListWrapperPresent) {
+                    var input = this._getTemplate('input', this.config.placeholder, this.config.classes.multiselectInput);
+                    input.addEventListener('keyup', _handleInputChange.bind(this));
+                    listWrapper.appendChild(input);
+                }
+            }
+            listWrapper.appendChild(list);
+            if (!isListWrapperPresent) {
+                d.appendChild(listWrapper);
+                this.container.appendChild(d);
+            }
+            if (this.type === 'multi-select') {
+                listWrapper.querySelector('[data-element="input"]').focus();
+            }
             this.isListVisible = true;
         }
     }
 
-    function _clearList() {
+    function _clearList(isMultiSearch) {
         this.isListVisible = false;
+        var list;
         if (this.currentTimerId) {
             clearInterval(this.currentTimerId);
         }
-        var list = this.container.querySelector('ul');
+        if (isMultiSearch) {
+            list = this.container.querySelector('[data-element="list"]');
+        }
+        else {
+            list = this.container.querySelector('[data-element="multiselect-wrapper"]');
+        }
         if (list) {
-            this.container.removeChild(list);
+            list.parentElement.removeChild(list);
         }
         if (this.type === 'text') {
             this.data = [];
@@ -253,7 +285,7 @@
     }
 
     function _searchList() {
-        this._clearList();
+        this._clearList(true);
         if (this.type === 'single-select' && !this.prevText) {
             var itemSelectedClass = this.config.classes.optionSelected;
             this.selectedItems = [];
@@ -288,7 +320,6 @@
     }
 
     function _handleEscape() {
-        console.log('ESCAPE');
         this._clearList();
     }
 
@@ -311,7 +342,7 @@
             } else {
                 this.highlightPosition -= 1;
             }
-            this._hightlightElement();
+            this._hightlightElement(true);
         }
     }
 
@@ -323,7 +354,7 @@
             } else {
                 this.highlightPosition = 0;
             }
-            this._hightlightElement();
+            this._hightlightElement(true);
         }
     }
 
@@ -358,7 +389,7 @@
 
     function _handleInputFocus(e) {
         if (!this.isListVisible) {
-            if ((this.config.maxTags > 0 && this.selectedItems.length < this.config.maxTags) || this.maxTags === -1) {
+            if ((this.config.maxTags > 0 && this.selectedItems.length < this.config.maxTags) || this.maxTags === -1 || this.type === 'single-select') {
                 this._populateList();
             }
         }
@@ -385,7 +416,7 @@
         }
     }
 
-    function _hightlightElement() {
+    function _hightlightElement(isKeyPressed) {
         var $listElement = this.container.querySelector('[data-element="list"]');
         var classes = this.config.classes;
         var highlightedClass = classes.optionHighlight;
@@ -398,6 +429,10 @@
         var $selectedItem = $listItems[this.highlightPosition];
         if ($selectedItem) {
             $selectedItem.classList.add(highlightedClass);
+            if (isKeyPressed) {
+                var delta = $selectedItem.offsetTop - $listElement.clientHeight;
+                $listElement.scrollTop = $selectedItem.offsetTop - $listElement.clientHeight + $selectedItem.clientHeight;
+            }
         }
     }
 
@@ -411,9 +446,15 @@
         var value, key;
         var items = this.selectedItems;
         if ($selectedItem) {
-            $selectedItem.classList.add(optionSelectedClass);
             value = $selectedItem.dataset.value;
             key = $selectedItem.dataset.key;
+            var $allSelectedOptions = $listElement.querySelectorAll('[data-key="' + key + '"]');
+            if ($allSelectedOptions) {
+                var i = 0;
+                for (; i < $allSelectedOptions.length; i++) {
+                    $allSelectedOptions[i].classList.add(optionSelectedClass);
+                }
+            }
         }
         var selectedItem = {
             key: key,
@@ -446,9 +487,14 @@
                 var $remove = this._getTemplate('removeIcon');
                 $spanWrapper.appendChild($span);
                 $spanWrapper.appendChild($remove);
-                var $wrapper = this.container.querySelector('[data-element="item-wrapper"]');
                 $remove.addEventListener('click', _handleRemoveElement.bind(this));
-                $wrapper.appendChild($spanWrapper);
+                var $wrapper = this.container.querySelector('[data-element="item-wrapper"]');
+                var $input = $wrapper.querySelector('[data-element="input"]');
+                if ($input) {
+                    $wrapper.insertBefore($spanWrapper, $input);
+                } else {
+                    $wrapper.appendChild($spanWrapper);
+                }
             }
         }
         if (this.config.maxTags > 0 && items.length === this.config.maxTags) {
@@ -467,7 +513,7 @@
     function _removeInput() {
         var $input = this.container.querySelector('[data-element="input"]');
         if ($input) {
-            this.container.children[0].removeChild($input);
+            $input.parentElement.removeChild($input);
         }
     }
 
@@ -491,8 +537,7 @@
             }
             if ($item) {
                 var $itemWrapper = $item.parentElement;
-                var $allItemsWrapper = this.container.querySelector('[data-element="item-wrapper"]');
-                $allItemsWrapper.removeChild($itemWrapper);
+                $itemWrapper.parentElement.removeChild($itemWrapper);
                 var index = -1;
                 var i = 0;
                 for (; i < this.selectedItems.length; i++) {

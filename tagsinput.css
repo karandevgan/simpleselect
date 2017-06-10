@@ -15,6 +15,7 @@
     height: 24px;
     line-height: 24px;
     cursor: default;
+    color: gray;
 }
 
 .tags-input__input {
@@ -24,6 +25,23 @@
     flex-grow: 100;
     min-width: 50px;
     height: 24px;
+    box-sizing: border-box;
+}
+
+.tags-input__multi-wrapper {
+    position: absolute;
+    left:0;
+    right:0;
+    border: 1px solid gray;
+}
+
+.tags-input__input--multi {
+    width: 100%;
+    box-sizing: border-box;
+    outline: none;
+    border: none;
+    height: 24px;
+    padding: 5px;
 }
 
 .tags-input__input:focus {
@@ -31,20 +49,20 @@
 }
 
 .tags-input__list {
-    position: absolute;
     list-style: none;
     padding: 0;
     margin: 0;
-    left:0;
-    right:0;
-    border: 1px solid gray;
     display: block;
+    max-height: 300px;
+    overflow-x: hidden;
+    overflow-y: scroll;
 }
 
 .tags-input__option {
     display: block;
     cursor: pointer;
-    width: 100;
+    width: 100%;
+    box-sizing: border-box;
     padding: 5px;
     border-top: 1px solid gray;
 }
@@ -64,9 +82,9 @@
     position: relative;
     background-color: blue;
     color: white;
-    height: 22px;
+    height: 20px;
     margin: 2px;
-    line-height: 22px;
+    line-height: 20px;
     cursor: default;
 }
 
