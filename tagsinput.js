@@ -43,7 +43,8 @@
             removeIcon: 'tags-input__item__remove',
             itemWrapper: 'tags-input__item-wrapper',
             listWrapper: 'tags-input__multi-wrapper',
-            multiselectInput: 'tags-input__input--multi'
+            multiselectInput: 'tags-input__input--multi',
+            caretSign: 'tags-input__caret'
         },
         key: 'id',
         value: 'name',
@@ -119,6 +120,7 @@
 
     TagsInput.prototype.init = init;
     TagsInput.prototype.getValues = getValues;
+    TagsInput.prototype.setEnabled = setEnabled;
     TagsInput.prototype._render = _render;
     TagsInput.prototype._clearList = _clearList;
     TagsInput.prototype._createTemplates = _createTemplates;
@@ -153,6 +155,10 @@
                 return strToEl('<div class="%WRAPPER_CLASS%" data-tags-element="item-wrapper"></div>'
                     .replace('%WRAPPER_CLASS%', classes.wrapper));
             },
+            caretSign: function () {
+                return strToEl('<span class="%CARET_CLASS%" data-tags-element="caret">&#9660;</span>'
+                    .replace('%CARET_CLASS%', classes.caretSign));
+            },
             selectDisplay: function () {
                 return strToEl('<div class="%SINGLE_SELECT_ITEM_CLASS%" data-tags-element="display-holder">%PLACEHOLDER%</div>'
                     .replace('%SINGLE_SELECT_ITEM_CLASS%', classes.selectDisplay)
@@ -180,7 +186,7 @@
                     .replace('%MULTI_WRAPPER_CLASS%', classes.listWrapper))
             },
             selectedItemWrapper: function () {
-                return strToEl('<span class="%ITEM_WRAPPER_CLASS%"></span>'.replace('%ITEM_WRAPPER_CLASS%', classes.itemWrapper));
+                return strToEl('<span class="%ITEM_WRAPPER_CLASS%" data-tags-element="selected-item-wrapper"></span>'.replace('%ITEM_WRAPPER_CLASS%', classes.itemWrapper));
             },
             selectedItem: function (key, value) {
                 return strToEl('<span class="%ITEM_CLASS%" data-key="%KEY%" data-tags-element="selected-item">%VALUE%</span>'
@@ -422,14 +428,21 @@
     }
 
     function _handleInputFocus(e) {
+        var maxTags;
+        if (this.disabled) {
+            return;
+        }
+        maxTags = this.config.maxTags;
         if (!this.isListVisible) {
-            if ((this.config.maxTags > 0 && this.selectedItems.length < this.config.maxTags) || this.maxTags === -1 || this.type === 'single-select') {
+            if ((maxTags > 0 && this.selectedItems.length < maxTags) || maxTags === -1 || this.type === 'single-select') {
                 if (!this.isListPopulated)
                     this._populateList();
                 else {
                     this._render();
                 }
             }
+        } else {
+            this._clearList();
         }
     }
 
@@ -437,7 +450,7 @@
         var target, data_element;
         target = e.target;
         data_element = target.dataset.tagsElement;
-        if (data_element && (data_element === 'item-wrapper' || data_element === 'display-holder')) {
+        if (!data_element || (data_element !== 'selected-item' && data_element !== 'remove-item')) {
             _handleInputFocus.call(this, e);
         }
     }
@@ -477,7 +490,7 @@
     }
 
     function _selectElement() {
-        var classes, optionSelectedClass, optionSelectedClassSelector, $listElement, $listItems, $selectedItem, value, key, items, selectedItem, $allSelectedOptions;
+        var classes, optionSelectedClass, optionSelectedClassSelector, $listElement, $listItems, $selectedItem, value, key, items, selectedItem, $allSelectedOptions, isItemAlreadySelected;
         classes = this.config.classes;
         optionSelectedClass = classes.optionSelected;
         optionSelectedClassSelector = '.' + optionSelectedClass;
@@ -489,22 +502,27 @@
         if ($selectedItem) {
             value = $selectedItem.dataset.value;
             key = $selectedItem.dataset.key;
+            selectedItem = {
+                key: key,
+                value: value
+            };
+            this.config.key, 'key'
+            isItemAlreadySelected = _isItemPresentInList(selectedItem, this.selectedItems, 'key', 'key');
+            if (isItemAlreadySelected) {
+                return;
+            }
             $allSelectedOptions = $listElement.querySelectorAll('[data-key="' + key + '"]');
             if ($allSelectedOptions) {
-                var i = 0;
-                for (; i < $allSelectedOptions.length; i++) {
-                    $allSelectedOptions[i].classList.add(optionSelectedClass);
-                }
+                Array.prototype.slice.call($allSelectedOptions)
+                    .forEach(function (item) {
+                        item.classList.add(optionSelectedClass);
+                    });
             }
+            if (this.type === 'single-select') {
+                this.selectedItems = [];
+            }
+            this._pushItem(selectedItem);
         }
-        selectedItem = {
-            key: key,
-            value: value
-        };
-        if (this.type === 'single-select') {
-            this.selectedItems = [];
-        }
-        this._pushItem(selectedItem);
     }
 
     function _pushItem(selectedItem) {
@@ -515,7 +533,7 @@
             return false;
         }
         $input = this.container.querySelector('[data-tags-element="input"]');
-        if (!_isItemPresentInList(selectedItem, items, this.config.key, 'key')) {
+        if (!_isItemPresentInList(selectedItem, items, 'key', 'key')) {
             items.push(selectedItem);
             if (this.type !== 'single-select') {
                 if (this.type === 'multi-select') {
@@ -569,7 +587,11 @@
     }
 
     function _removeElement(key) {
+        if (this.disabled) {
+            return;
+        }
         var $selectedItems, i, j, $item, $itemWrapper, index, $el, item;
+
         $selectedItems = this.container.querySelectorAll('[data-tags-element="selected-item"]');
         if ($selectedItems) {
             j = 0;
@@ -628,8 +650,9 @@
     }
 
     function _createInput() {
-        var container, wrapper, placeholder, input, displayHolder, type, isNewDisplayWrapper;
+        var container, wrapper, placeholder, input, displayHolder, type, isNewDisplayWrapper, caret;
         type = this.type;
+        caret = this._getTemplate('caretSign');
         if (!this.container) {
             container = this._getTemplate('container');
             wrapper = this._getTemplate('wrapper');
@@ -642,18 +665,23 @@
         placeholder = this.type === 'autocomplete' ? this.config.placeholderSearch : this.config.placeholder;
         if (this.type !== 'multi-select') {
             input = this._getTemplate('input', placeholder);
+            wrapper.appendChild(input);
             input.addEventListener('keyup', _handleInputChange.bind(this));
             input.addEventListener('blur', _handleBlurEvent.bind(this));
             if (this.type === 'single-select') {
                 input.addEventListener('focus', _handleInputFocus.bind(this));
+                caret.addEventListener('click', function () {
+                    input.focus();
+                });
+                this.container.appendChild(caret);
             }
-            wrapper.appendChild(input);
         } else {
             displayHolder = this._getTemplate('selectDisplay');
             if (isNewDisplayWrapper) {
                 wrapper.addEventListener('click', _handleMultiSelectFocus.bind(this));
             }
             wrapper.appendChild(displayHolder);
+            wrapper.appendChild(caret);
         }
         this.container.appendChild(wrapper);
         this.element.appendChild(this.container);
@@ -663,9 +691,9 @@
         var wait, val, timer, promiseToResolve, fromServer;
         wait = 0;
         fromServer = this.config.fromServer;
-        if (this.config.fromServer) {
+        val = this.prevText;
+        if (fromServer && this.type === 'autocomplete') {
             wait = this.config.debounce;
-            val = this.prevText;
         }
         if (typeof this.config.choices === 'object' && !fromServer) {
             this.data = this.config.choices;
@@ -699,6 +727,42 @@
                 returnArray.push(item.value);
             });
             return returnArray;
+        }
+    }
+
+    function setEnabled(isEnabled) {
+        var $caret, $removeIconsCollection, $input, disabledText, enabledPlaceholderText, $selectedItemsWrappers;
+        this.disabled = !isEnabled;
+        disabledText = !!!isEnabled ? 'true' : 'false';
+        this.element.setAttribute('data-tags-disabled', disabledText);
+        $caret = this.container.querySelector('[data-tags-element="caret"]');
+        if ($caret) {
+            $caret.setAttribute('data-tags-disabled', disabledText);
+        }
+        $selectedItemsWrappers = this.container.querySelectorAll('[data-tags-element="selected-item-wrapper"]');
+        if ($selectedItemsWrappers) {
+            Array.prototype.slice.call($selectedItemsWrappers)
+                .forEach(function (item) {
+                    item.setAttribute('data-tags-disabled', disabledText);
+                });
+        }
+        $removeIconsCollection = this.container.querySelectorAll('[data-tags-element="remove-item"]');
+        if ($removeIconsCollection) {
+            Array.prototype.slice.call($removeIconsCollection)
+                .forEach(function (item) {
+                    item.setAttribute('data-tags-disabled', disabledText);
+                });
+        }
+        $input = this.container.querySelector('[data-tags-element="input"]');
+        if ($input) {
+            $input.setAttribute('data-tags-disabled', disabledText);
+            $input.disabled = !!!isEnabled;
+            if (this.type === 'autocomplete') {
+                enabledPlaceholderText = this.config.placeholderSearch;
+            } else {
+                enabledPlaceholderText = this.config.placeholder;
+            }
+            $input.placeholder = !!!isEnabled ? '' : enabledPlaceholderText;
         }
     }
 
