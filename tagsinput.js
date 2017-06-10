@@ -8,7 +8,11 @@
     }
 })(this, function () {
     'use strict';
-    var keyMap = {
+    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount;
+    tagsIdentityCount = 1;
+    allInitializedElements = {};
+
+    keyMap = {
         13: 'ENTER',
         27: 'ESCAPE',
         40: 'DOWN_ARROW',
@@ -16,11 +20,12 @@
         8: 'BACKSPACE'
     };
 
-    var defaultOptions = {
+    defaultOptions = {
         debounce: 500,
-        placeholder: 'Search Here',
+        placeholder: 'Select',
+        placeholderSearch: 'Search',
         searchOnEnter: true,
-        searchOnBackspace: true,
+        searchOption: true,
         minCharacters: 3,
         maxTags: -1,
         closeOnBlur: true,
@@ -45,18 +50,19 @@
         value: 'value'
     };
 
-    var extend = function (obj1, obj2) {
+    extend = function (obj1, obj2) {
+        var returnObject, prop, i;
         if (Object.extend) {
             return Object.assign({}, obj1, obj2);
         }
-        var returnObject = {};
+        returnObject = {};
         if (typeof obj1 === 'object' && typeof obj2 === 'object') {
-            var i = 0;
-            for (var prop in obj1) {
+            i = 0;
+            for (prop in obj1) {
                 obj1.hasOwnProperty(prop);
                 returnObject[prop] = obj1[prop];
             }
-            for (var prop in obj2) {
+            for (prop in obj2) {
                 obj2.hasOwnProperty(prop);
                 returnObject[prop] = obj2[prop];
             }
@@ -64,46 +70,49 @@
         return returnObject;
     }
 
-    var strToEl = (function () {
-        var tempEl = document.createElement('div');
+    strToEl = (function () {
+        var tempEl, r
+        tempEl = document.createElement('div');
         return function (str) {
-            var r;
             tempEl.innerHTML = str;
             r = tempEl.children[0];
-
             while (tempEl.firstChild) {
                 tempEl.removeChild(tempEl.firstChild);
             }
-
             return r;
         };
     }());
 
     function TagsInput(element, userOptions) {
+        var elements, i, e1, e0;
         if (typeof element === 'string') {
-            var elements = document.querySelectorAll(element);
+            elements = document.querySelectorAll(element);
             if (elements.length > 1) {
-                var i = 1;
+                i = 1;
                 for (; i < elements.length; i++) {
-                    var e1 = elements[i];
+                    e1 = elements[i];
                     new TagsInput(e1, userOptions);
                 }
             }
+            e0 = elements[0];
+        } else {
+            e0 = element;
         }
+        if (e0 && e0.dataset.tagsId) {
+            return allInitializedElements[e0.dataset.tagsId];
+        }
+        e0.dataset.tagsId = tagsIdentityCount;
         userOptions = userOptions || {};
         this.highlightPosition = -1;
         this.config = extend(defaultOptions, userOptions);
         this.element = typeof element === 'string' ? document.querySelector(element) : element;
         this.type = element.dataset.type;
-        this.initialized = false;
         this.isListVisible = false;
         this.prevText = '';
         this.selectedItems = [];
         this.data = [];
         this.currentTimerId = null;
-        if (!this.initialized) {
-            this.init();
-        }
+        this.init();
     }
 
     TagsInput.prototype.init = init;
@@ -128,7 +137,7 @@
     TagsInput.prototype._clearInput = _clearInput;
     TagsInput.prototype._searchList = _searchList;
     TagsInput.prototype._removeInput = _removeInput;
-    TagsInput.prototype.getValues = _getValues;
+    TagsInput.prototype.getValues = getValues;
 
     function _createTemplates() {
         var classes = this.config.classes;
@@ -142,8 +151,9 @@
                     .replace('%WRAPPER_CLASS%', classes.wrapper));
             },
             selectDisplay: function () {
-                return strToEl('<div class="%SINGLE_SELECT_ITEM_CLASS%" data-element="display-holder">Select</div>'
-                    .replace('%SINGLE_SELECT_ITEM_CLASS%', classes.selectDisplay));
+                return strToEl('<div class="%SINGLE_SELECT_ITEM_CLASS%" data-element="display-holder">%PLACEHOLDER%</div>'
+                    .replace('%SINGLE_SELECT_ITEM_CLASS%', classes.selectDisplay)
+                    .replace('%PLACEHOLDER%', this.config.placeholder));
             },
             input: function (placeholder, inputClass) {
                 inputClass = inputClass || classes.input;
@@ -183,17 +193,19 @@
     }
 
     function _getTemplate(template) {
-        var args = Array.prototype.slice.call(arguments, 1);
+        var args, templates;
+        args = Array.prototype.slice.call(arguments, 1);
         if (!template) return;
-        var templates = this.config.templates;
+        templates = this.config.templates;
         return templates[template].apply(this, args);
     }
 
     function _render(isFilter) {
-        var data;
-        var list = this._getTemplate('list');
-        var keyAttr = this.config.key;
-        var valAttr = this.config.value;
+        var data, list, keyAttr, valAttr, itemEl, isListWrapperPresent, d, listWrapper, input;
+
+        list = this._getTemplate('list');
+        keyAttr = this.config.key;
+        valAttr = this.config.value;
 
         if (isFilter) {
             data = this.data.filter(function (item) {
@@ -205,7 +217,7 @@
         if (data && data.length) {
             data.forEach(function (item, index) {
                 if (typeof item[keyAttr] === 'string' && typeof item[valAttr] === 'string') {
-                    var itemEl = this._getTemplate('listItem', index, item[keyAttr], item[valAttr]);
+                    itemEl = this._getTemplate('listItem', index, item[keyAttr], item[valAttr]);
                     if (_isItemPresentInList(item, this.selectedItems, 'key')) {
                         itemEl.classList.add(this.config.classes.optionSelected);
                     }
@@ -215,16 +227,16 @@
                     list.appendChild(itemEl);
                 }
             }.bind(this));
-            var isListWrapperPresent = true;
-            var d = document.createDocumentFragment();
-            var listWrapper = this.container.querySelector('[data-element="multiselect-wrapper"]');
+            isListWrapperPresent = true;
+            d = document.createDocumentFragment();
+            listWrapper = this.container.querySelector('[data-element="multiselect-wrapper"]');
             if (!listWrapper) {
                 listWrapper = this._getTemplate('listWrapper');
-                var isListWrapperPresent = false;
+                isListWrapperPresent = false;
             }
-            if (this.type === 'multi-select') {
+            if (this.type === 'multi-select' && this.config.searchOption) {
                 if (!isListWrapperPresent) {
-                    var input = this._getTemplate('input', this.config.placeholder, this.config.classes.multiselectInput);
+                    input = this._getTemplate('input', this.config.placeholderSearch, this.config.classes.multiselectInput);
                     input.addEventListener('keyup', _handleInputChange.bind(this));
                     listWrapper.appendChild(input);
                 }
@@ -234,7 +246,7 @@
                 d.appendChild(listWrapper);
                 this.container.appendChild(d);
             }
-            if (this.type === 'multi-select') {
+            if (this.type === 'multi-select' && this.config.searchOption) {
                 listWrapper.querySelector('[data-element="input"]').focus();
             }
             this.isListVisible = true;
@@ -242,8 +254,8 @@
     }
 
     function _clearList(isMultiSearch) {
-        this.isListVisible = false;
         var list;
+        this.isListVisible = false;
         if (this.currentTimerId) {
             clearInterval(this.currentTimerId);
         }
@@ -263,12 +275,13 @@
     }
 
     function _handleInputChange(e) {
-        var current = e.currentTarget;
-        var currentValue = current.value || '';
-        var currentValue = currentValue.trim().toLowerCase();
-        var currentKey = e.keyCode || e.which;
-        var prevValue = this.prevText;
-        var isTextSame = currentValue === prevValue;
+        var current, currentValue, currentKey, prevValue, isTextSame, itemSelectedClass, $selectedItems;
+        current = e.currentTarget;
+        currentValue = current.value || '';
+        currentValue = currentValue.trim().toLowerCase();
+        currentKey = e.keyCode || e.which;
+        prevValue = this.prevText;
+        isTextSame = currentValue === prevValue;
         this.prevText = currentValue;
         if (!isTextSame) {
             if (this.type === 'text') {
@@ -277,7 +290,20 @@
                     this._populateList();
                 }
             } else if (this.type === 'single-select' || this.type === 'multi-select') {
-                this._searchList();
+                if (this.type === 'single-select' && !this.prevText) {
+                    itemSelectedClass = this.config.classes.optionSelected;
+                    this.selectedItems = [];
+                    $selectedItems = this.container.querySelectorAll('.' + itemSelectedClass);
+                    if ($selectedItems) {
+                        var i = 0;
+                        for (; i < $selectedItems.length; i++) {
+                            $selectedItems[i].classList.remove(itemSelectedClass);
+                        }
+                    }
+                }
+                if (this.config.searchOption) {
+                    this._searchList();
+                }
             }
         } else if (this.isListVisible && keyMap[currentKey]) {
             this._handleKeyPress(keyMap[currentKey]);
@@ -286,14 +312,6 @@
 
     function _searchList() {
         this._clearList(true);
-        if (this.type === 'single-select' && !this.prevText) {
-            var itemSelectedClass = this.config.classes.optionSelected;
-            this.selectedItems = [];
-            var $selectedItem = this.container.querySelector('.' + itemSelectedClass);
-            if ($selectedItem) {
-                $selectedItem.classList.remove(itemSelectedClass);
-            }
-        }
         this._render(true);
     }
 
@@ -335,8 +353,9 @@
     }
 
     function _handleUpArrow() {
+        var $listOptions;
         if (this.isListVisible) {
-            var $listOptions = this.container.querySelectorAll('[data-element="option"]');
+            $listOptions = this.container.querySelectorAll('[data-element="option"]');
             if (this.highlightPosition <= 0) {
                 this.highlightPosition = $listOptions.length - 1;
             } else {
@@ -347,8 +366,9 @@
     }
 
     function _handleDownArrow() {
+        var $listOptions;
         if (this.isListVisible) {
-            var $listOptions = this.container.querySelectorAll('[data-element="option"]');
+            $listOptions = this.container.querySelectorAll('[data-element="option"]');
             if (this.highlightPosition < $listOptions.length - 1) {
                 this.highlightPosition += 1;
             } else {
@@ -359,22 +379,25 @@
     }
 
     function _handleMouseOver(e) {
-        var current = e.currentTarget;
-        var index = current.dataset.index;
+        var current, index;
+        current = e.currentTarget;
+        index = current.dataset.index;
         this.highlightPosition = index;
         this._hightlightElement();
     }
 
     function _handleMouseOut(e) {
-        var current = e.currentTarget;
+        var current;
+        current = e.currentTarget;
         this.highlightPosition = -1;
         this._hightlightElement();
     }
 
     function _handleOutsideClick(e) {
-        var target = e.target;
+        var target, $list;
+        target = e.target;
         if (this.container) {
-            var $list = this.container.querySelector('[data-element="list"]');
+            $list = this.container.querySelector('[data-element="list"]');
             if ($list) {
                 if (!this.container.contains(target)) {
                     this._clearList();
@@ -396,15 +419,17 @@
     }
 
     function _handleMultiSelectFocus(e) {
-        var target = e.target;
-        var data_element = target.dataset.element;
+        var target, data_element;
+        target = e.target;
+        data_element = target.dataset.element;
         if (data_element && (data_element === 'item-wrapper' || data_element === 'display-holder')) {
             _handleInputFocus.call(this, e);
         }
     }
 
     function _clearInput() {
-        var $input = this.container.querySelector('[data-element="input"]');
+        var $input;
+        $input = this.container.querySelector('[data-element="input"]');
         if ($input) {
             if (this.type !== 'single-select' || this.selectedItems.length < 1) {
                 $input.value = '';
@@ -417,38 +442,39 @@
     }
 
     function _hightlightElement(isKeyPressed) {
-        var $listElement = this.container.querySelector('[data-element="list"]');
-        var classes = this.config.classes;
-        var highlightedClass = classes.optionHighlight;
-        var highlightedClassSelector = '.' + highlightedClass;
-        var $listItems = $listElement.children;
-        var $prevSelectedItem = $listElement.querySelector(highlightedClassSelector);
+        var $listElement, classes, highlightedClass, highlightedClassSelector, $listItems, $prevSelectedItem, $selectedItem;
+        $listElement = this.container.querySelector('[data-element="list"]');
+        classes = this.config.classes;
+        highlightedClass = classes.optionHighlight;
+        highlightedClassSelector = '.' + highlightedClass;
+        $listItems = $listElement.children;
+        $prevSelectedItem = $listElement.querySelector(highlightedClassSelector);
         if ($prevSelectedItem) {
             $prevSelectedItem.classList.remove(highlightedClass);
         }
-        var $selectedItem = $listItems[this.highlightPosition];
+        $selectedItem = $listItems[this.highlightPosition];
         if ($selectedItem) {
             $selectedItem.classList.add(highlightedClass);
             if (isKeyPressed) {
-                var delta = $selectedItem.offsetTop - $listElement.clientHeight;
                 $listElement.scrollTop = $selectedItem.offsetTop - $listElement.clientHeight + $selectedItem.clientHeight;
             }
         }
     }
 
     function _selectElement() {
-        var classes = this.config.classes;
-        var optionSelectedClass = classes.optionSelected;
-        var optionSelectedClassSelector = '.' + optionSelectedClass;
-        var $listElement = this.container.querySelector('[data-element="list"]');
-        var $listItems = $listElement.children;
-        var $selectedItem = $listItems[this.highlightPosition];
-        var value, key;
-        var items = this.selectedItems;
+        var classes, optionSelectedClass, optionSelectedClassSelector, $listElement, $listItems, $selectedItem, value, key, items, selectedItem, $allSelectedOptions;
+        classes = this.config.classes;
+        optionSelectedClass = classes.optionSelected;
+        optionSelectedClassSelector = '.' + optionSelectedClass;
+        $listElement = this.container.querySelector('[data-element="list"]');
+        $listItems = $listElement.children;
+        $selectedItem = $listItems[this.highlightPosition];
+        value, key;
+        items = this.selectedItems;
         if ($selectedItem) {
             value = $selectedItem.dataset.value;
             key = $selectedItem.dataset.key;
-            var $allSelectedOptions = $listElement.querySelectorAll('[data-key="' + key + '"]');
+            $allSelectedOptions = $listElement.querySelectorAll('[data-key="' + key + '"]');
             if ($allSelectedOptions) {
                 var i = 0;
                 for (; i < $allSelectedOptions.length; i++) {
@@ -456,7 +482,7 @@
                 }
             }
         }
-        var selectedItem = {
+        selectedItem = {
             key: key,
             value: value
         };
@@ -467,29 +493,30 @@
     }
 
     function _pushItem(selectedItem) {
-        var items = this.selectedItems;
+        var items, $input, $spanWrapper, $span, $remove, $wrapper, $displayHolder;
+        items = this.selectedItems;
         if (this.config.maxTags > 0 && items.length === this.config.maxTags) {
             console.error('Items exceed than maximum allowed items');
             return false;
         }
-        var $input = this.container.querySelector('[data-element="input"]');
+        $input = this.container.querySelector('[data-element="input"]');
         if (!_isItemPresentInList(selectedItem, items, 'key')) {
             items.push(selectedItem);
             if (this.type !== 'single-select') {
                 if (this.type === 'multi-select') {
-                    var $displayHolder = this.container.querySelector("[data-element='display-holder']");
+                    $displayHolder = this.container.querySelector("[data-element='display-holder']");
                     if ($displayHolder) {
                         $displayHolder.parentElement.removeChild($displayHolder);
                     }
                 }
-                var $spanWrapper = this._getTemplate('selectedItemWrapper');
-                var $span = this._getTemplate('selectedItem', selectedItem.key, selectedItem.value);
-                var $remove = this._getTemplate('removeIcon');
+                $spanWrapper = this._getTemplate('selectedItemWrapper');
+                $span = this._getTemplate('selectedItem', selectedItem.key, selectedItem.value);
+                $remove = this._getTemplate('removeIcon');
                 $spanWrapper.appendChild($span);
                 $spanWrapper.appendChild($remove);
                 $remove.addEventListener('click', _handleRemoveElement.bind(this));
-                var $wrapper = this.container.querySelector('[data-element="item-wrapper"]');
-                var $input = $wrapper.querySelector('[data-element="input"]');
+                $wrapper = this.container.querySelector('[data-element="item-wrapper"]');
+                $input = $wrapper.querySelector('[data-element="input"]');
                 if ($input) {
                     $wrapper.insertBefore($spanWrapper, $input);
                 } else {
@@ -505,43 +532,47 @@
             }
             if (this.type === 'single-select') {
                 $input.value = items[0].value;
+                this.prevText = items[0].value.trim().toLowerCase();
             }
         }
         return true;
     }
 
     function _removeInput() {
-        var $input = this.container.querySelector('[data-element="input"]');
+        var $input;
+        $input = this.container.querySelector('[data-element="input"]');
         if ($input) {
             $input.parentElement.removeChild($input);
         }
     }
 
     function _handleRemoveElement(e) {
-        var element = e.currentTarget.parentElement.querySelector('[data-element="selected-item"]');
-        var key = element.dataset.key;
+        var element, key;
+        element = e.currentTarget.parentElement.querySelector('[data-element="selected-item"]');
+        key = element.dataset.key;
         this._removeElement(key);
     }
 
     function _removeElement(key) {
-        var $selectedItems = this.container.querySelectorAll('[data-element="selected-item"]');
+        var $selectedItems, i, j, $item, $itemWrapper, index, $el, item;
+        $selectedItems = this.container.querySelectorAll('[data-element="selected-item"]');
         if ($selectedItems) {
-            var j = 0;
-            var $item;
+            j = 0;
+            $item;
             for (; j < $selectedItems.length; j++) {
-                var $el = $selectedItems[j];
+                $el = $selectedItems[j];
                 if ($el.dataset.key === key) {
                     $item = $el;
                     break;
                 }
             }
             if ($item) {
-                var $itemWrapper = $item.parentElement;
+                $itemWrapper = $item.parentElement;
                 $itemWrapper.parentElement.removeChild($itemWrapper);
-                var index = -1;
-                var i = 0;
+                index = -1;
+                i = 0;
                 for (; i < this.selectedItems.length; i++) {
-                    var item = this.selectedItems[i];
+                    item = this.selectedItems[i];
                     if (item.key === key) {
                         index = i;
                         break;
@@ -550,13 +581,10 @@
                 if (index !== -1) {
                     this.selectedItems.splice(index, 1);
                 }
-                if (this.type !== 'multi-select') {
-                    if (this.config.maxTags > 0 && this.selectedItems.length < this.config.maxTags) {
-                        if (!this.container.querySelector('[data-element="input"]')) {
-                            this._createInput();
-                        }
-                    }
-                } else if (this.type === 'multi-select' && this.selectedItems.length === 0) {
+                if (this.type !== 'multi-select' && this.config.maxTags > 0 && this.selectedItems.length < this.config.maxTags && !this.container.querySelector('[data-element="input"]')) {
+                    this._createInput();
+                }
+                else if (this.type === 'multi-select' && this.selectedItems.length === 0) {
                     this._createInput();
                 }
             }
@@ -564,10 +592,11 @@
     }
 
     function _isItemPresentInList(item, list, key) {
+        var index, element;
         if (list) {
-            var index = 0;
+            index = 0;
             for (; index < list.length; index++) {
-                var element = list[index];
+                element = list[index];
                 if (element[key] === item[key]) {
                     return true;
                 }
@@ -577,57 +606,57 @@
     }
 
     function _getWidth(el) {
-        var styles = window.getComputedStyle(el);
-        var margin = parseFloat(styles['margin-right']) + parseFloat(styles["margin-left"]);
+        var styles, margin;
+        styles = window.getComputedStyle(el);
+        margin = parseFloat(styles['margin-right']) + parseFloat(styles["margin-left"]);
         return Math.ceil(el.offsetWidth + margin);
     }
 
-    function _createInput(type) {
-        type = type || 'text';
-        var container, wrapper;
+    function _createInput() {
+        var container, wrapper, placeholder, input, displayHolder, type, isNewDisplayWrapper;
+        type = this.type;
         if (!this.container) {
             container = this._getTemplate('container');
             wrapper = this._getTemplate('wrapper');
+            isNewDisplayWrapper = true;
             this.container = container;
-            if (this.type === 'multi-select') {
-                wrapper.addEventListener('click', _handleMultiSelectFocus.bind(this));
-            }
         } else {
+            isNewDisplayWrapper = false;
             wrapper = this.container.children[0];
         }
-        var placeholder = this.config.placeholder;
-        var input = this._getTemplate('input', placeholder);
-        input.addEventListener('keyup', _handleInputChange.bind(this));
+        placeholder = this.type === 'text' ? this.config.placeholderSearch : this.config.placeholder;
         if (this.type !== 'multi-select') {
+            input = this._getTemplate('input', placeholder);
+            input.addEventListener('keyup', _handleInputChange.bind(this));
             input.addEventListener('blur', _handleBlurEvent.bind(this));
-        }
-        if (this.type === 'single-select') {
-            input.addEventListener('focus', _handleInputFocus.bind(this));
-        }
-        if (this.type === 'multi-select') {
-            var displayHolder = this._getTemplate('selectDisplay');
-            wrapper.appendChild(displayHolder);
-        }
-        if (this.type !== 'multi-select') {
+            if (this.type === 'single-select') {
+                input.addEventListener('focus', _handleInputFocus.bind(this));
+            }
             wrapper.appendChild(input);
+        } else {
+            displayHolder = this._getTemplate('selectDisplay');
+            if (isNewDisplayWrapper) {
+                wrapper.addEventListener('click', _handleMultiSelectFocus.bind(this));
+            }
+            wrapper.appendChild(displayHolder);
         }
         this.container.appendChild(wrapper);
         this.element.appendChild(this.container);
     }
 
     function _populateList() {
-        var wait = 0;
+        var wait, val, timer, promiseToResolve;
+        wait = 0;
         if (this.type === 'text') {
             wait = this.config.debounce;
         }
-        var val = this.prevText;
-        var timer;
-        this.currentTimerId = setTimeout(function () {
+        val = this.prevText;
+        this.currentTimerId = setTimeout(function _populateListTimeout() {
             if (typeof this.config.choices === 'object') {
                 this.data = this.config.choices;
                 this._render();
             } else if (typeof this.config.choices === 'function') {
-                var promiseToResolve = this.config.choices(val);
+                promiseToResolve = this.config.choices(val);
                 promiseToResolve
                     .then(function (data) {
                         if (timer === this.currentTimerId) {
@@ -642,11 +671,12 @@
         timer = this.currentTimerId;
     }
 
-    function _getValues(isWholeObjectRequested) {
+    function getValues(isWholeObjectRequested) {
+        var returnArray;
         if (isWholeObjectRequested) {
             return this.selectedItems;
         } else {
-            var returnArray = [];
+            returnArray = [];
             this.selectedItems.forEach(function (item) {
                 returnArray.push(item.value);
             });
@@ -655,10 +685,7 @@
     }
 
     function init() {
-        if (this.initialized) {
-            return this;
-        }
-
+        var items, key, value;
         if (!this.type) {
             console.error('Please Enter Type In Element');
             return;
@@ -674,21 +701,19 @@
         }
 
         this._createTemplates();
-        if (this.type === 'text' || this.type === 'single-select' || this.type === 'multi-select') {
-            this._createInput(this.type);
-        }
+        this._createInput();
 
         document.addEventListener('click', _handleOutsideClick.bind(this));
 
-        var items = this.config.items;
+        items = this.config.items;
         if (items && items.length > 0) {
             items.some(function (item) {
-                var key = item[this.config.key];
-                var value = item[this.config.value];
+                key = item[this.config.key];
+                value = item[this.config.value];
                 return !this._pushItem({ key: key, value: value });
             }.bind(this));
         }
-
+        allInitializedElements[tagsIdentityCount++] = this;
         return this;
     }
 
