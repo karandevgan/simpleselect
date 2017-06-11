@@ -280,13 +280,13 @@
         }
     }
 
-    function _clearList(isMultiSearch) {
+    function _clearList(isMultiSelectSearch) {
         var list;
         this.isListVisible = false;
         if (this.currentTimerId) {
             clearInterval(this.currentTimerId);
         }
-        if (isMultiSearch) {
+        if (isMultiSelectSearch) {
             list = this.container.querySelector('[data-tags-element="list"]');
         }
         else {
@@ -295,9 +295,9 @@
         if (list) {
             list.parentElement.removeChild(list);
         }
-        // if (this.type === 'autocomplete') {
-        //     this.data = [];
-        // }
+        if (this.type === 'autocomplete' && this.config.fromServer) {
+            this.data = [];
+        }
         this.highlightPosition = -1;
     }
 
@@ -721,7 +721,7 @@
                         if (timer === this.currentTimerId) {
                             this.data = data;
                             this.isListPopulated = true;
-                            this._render(!fromServer && !this.type === 'autocomplete');
+                            this._render(!fromServer || this.type !== 'autocomplete');
                         }
                     }.bind(this)).catch(function (error) {
                         console.error(error);
