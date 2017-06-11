@@ -44,7 +44,8 @@
             itemWrapper: 'tags-input__item-wrapper',
             listWrapper: 'tags-input__multi-wrapper',
             multiselectInput: 'tags-input__input--multi',
-            caretSign: 'tags-input__caret'
+            caretSign: 'tags-input__caret',
+            loading: 'tags-input__loading'
         },
         templates: {
             container: '<div class="%CONTAINER_CLASS%"></div>',
@@ -57,7 +58,8 @@
             listWrapper: '<div class="%MULTI_WRAPPER_CLASS%" data-tags-element="multiselect-wrapper"></div>',
             selectedItemWrapper: '<span class="%ITEM_WRAPPER_CLASS%" data-tags-element="selected-item-wrapper"></span>',
             selectedItem: '<span class="%ITEM_CLASS%" data-key="%KEY%" data-tags-element="selected-item">%VALUE%</span>',
-            removeIcon: '<span class="%REMOVE_ITEM_CLASS%" data-tags-element="remove-item">X</span>'
+            removeIcon: '<span class="%REMOVE_ITEM_CLASS%" data-tags-element="remove-item">X</span>',
+            loading: '<div class="%LOADING_CLASS%" style="display:none;" data-tags-element="loading">%LOADING_TEXT%</div>'
 
         },
         key: 'id',
@@ -67,7 +69,8 @@
         onInit: null,
         onItemCreate: null,
         onItemSelect: null,
-        onItemRemove: null
+        onItemRemove: null,
+        loadingText: 'Loading'
     };
 
     getTypeOf = function getTypeOf(obj) {
@@ -181,7 +184,7 @@
     TagsInput.prototype._clearInput = _clearInput;
     TagsInput.prototype._searchList = _searchList;
     TagsInput.prototype._removeInput = _removeInput;
-
+    TagsInput.prototype._setLoading = _setLoading;
 
     function _createTemplates() {
         var classes = this.config.classes;
@@ -238,6 +241,11 @@
             removeIcon: function () {
                 return strToEl(templateStrings.removeIcon
                     .replace(/%REMOVE_ITEM_CLASS%/g, classes.removeIcon));
+            },
+            loading: function (loadingText) {
+                return strToEl(templateStrings.loading
+                    .replace(/%LOADING_CLASS%/g, classes.loading)
+                    .replace(/%LOADING_TEXT%/g, loadingText));
             }
         };
     }
@@ -345,8 +353,10 @@
         isTextSame = currentValue === prevValue;
         this.prevText = currentValue;
         if (!isTextSame) {
+            this._setLoading(false);
             if (this.type === 'autocomplete') {
                 this._clearList();
+                this.currentTimerId = null;
                 if (currentValue.length >= this.config.minCharacters) {
                     if (!this.isListPopulated || this.config.fromServer) {
                         this._populateList();
@@ -364,7 +374,7 @@
                     this._searchList();
                 }
             }
-        } else if (this.isListVisible && keyMap[currentKey]) {
+        } else if (keyMap[currentKey]) {
             this._handleKeyPress(keyMap[currentKey]);
         }
     }
@@ -405,7 +415,7 @@
 
     function _handleEnter() {
         if (this.highlightPosition == -1) {
-            if (this.type === 'autocomplete') {
+            if (this.type === 'autocomplete' && !this.isListVisible) {
                 if (!this.isListPopulated || this.config.fromServer) {
                     this._populateList();
                 } else if (!this.config.fromServer) {
@@ -541,6 +551,9 @@
 
     function _selectElement() {
         var classes, optionSelectedClass, optionSelectedClassSelector, $listElement, $listItems, $selectedItem, value, key, items, selectedItem, $allSelectedOptions, isItemAlreadySelected;
+        if (this.disabled) {
+            return;
+        }
         classes = this.config.classes;
         optionSelectedClass = classes.optionSelected;
         optionSelectedClassSelector = '.' + optionSelectedClass;
@@ -707,16 +720,16 @@
     }
 
     function _createInput() {
-        var container, wrapper, placeholder, input, displayHolder, type, isNewDisplayWrapper, caret;
+        var container, wrapper, placeholder, input, displayHolder, type, isInit, caret;
         type = this.type;
         caret = this._getTemplate('caretSign');
         if (!this.container) { // If list is initialized for the first time
             container = this._getTemplate('container');
             wrapper = this._getTemplate('wrapper');
-            isNewDisplayWrapper = true;
+            isInit = true;
             this.container = container;
         } else {
-            isNewDisplayWrapper = false;
+            isInit = false;
             wrapper = this.container.querySelector('[data-tags-element="item-wrapper"]');
         }
         placeholder = this.type === 'autocomplete' ? this.config.placeholderSearch : this.config.placeholder;
@@ -734,13 +747,16 @@
             }
         } else {
             displayHolder = this._getTemplate('selectDisplay');
-            if (isNewDisplayWrapper) {
+            if (isInit) {
                 wrapper.addEventListener('click', _handleMultiSelectFocus.bind(this));
             }
             wrapper.appendChild(displayHolder);
             wrapper.appendChild(caret);
         }
         this.container.appendChild(wrapper);
+        if (isInit) {
+            this.container.appendChild(this._getTemplate('loading', this.config.loadingText));
+        }
         this.element.appendChild(this.container);
     }
 
@@ -764,6 +780,9 @@
             // Call goes here everytime is type is autocomplete and fromServer is true to populate list on input change.
             // In case of select, call goes only once, for the first time to populate list.
             this.currentTimerId = setTimeout(function _populateListTimeout() {
+                if (this.currentTimerId) {
+                    this._setLoading(true);
+                }
                 promiseToResolve = this.config.choices(val);
                 promiseToResolve
                     .then(function (data) {
@@ -771,6 +790,7 @@
                             this.data = data;
                             this.isListPopulated = true;
                             this._render(!fromServer || this.type !== 'autocomplete');
+                            this._setLoading(false);
                         }
                     }.bind(this)).catch(function (error) {
                         console.error(error);
@@ -833,6 +853,18 @@
         fn.apply(this, Array.prototype.slice.call(arguments));
     }
 
+    function _setLoading(isLoading) {
+        var $loading;
+        $loading = this.container.querySelector('[data-tags-element="loading"]');
+        if ($loading) {
+            if (isLoading) {
+                $loading.style.display = '';
+            } else {
+                $loading.style.display = 'none';
+            }
+        }
+    }
+
     function init() {
         var items, key, value, typeofChoices, validTypes, fn;
         validTypes = ['autocomplete', 'single-select', 'multi-select'];
@@ -848,7 +880,7 @@
         }
 
         // if fromServer is true and type is autocomplete, then type of choices must be a promise
-        if (this.config.fromServer && typeofChoices !== 'function' && this.type === 'autocomplete') {
+        if (this.config.fromServer && typeofChoices !== 'Function' && this.type === 'autocomplete') {
             console.error('Choices must be a promise when fromserver is true');
         }
 

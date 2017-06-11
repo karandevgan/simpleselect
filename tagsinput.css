@@ -14,6 +14,7 @@
     display: flex;
     flex-wrap: wrap;
     min-height: 24px;
+    position: relative;
 }
 
 .tags-input__display {
@@ -70,6 +71,16 @@
     cursor: text;
 }
 
+.tags-input__loading {
+    display: block;
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 5px;
+    background-color: white;
+    border: 1px solid gray;
+}
+
 .tags-input__list {
     list-style: none;
     padding: 0;
@@ -88,6 +99,10 @@
     padding: 5px;
     background-color: white;
     border-top: 1px solid gray;
+}
+
+.tags-input__option:nth-of-type(1) {
+    border-top: none;
 }
 
 .tags-input__option--highlighted {
@@ -129,8 +144,4 @@
 
 .tags-input__item__remove[data-tags-disabled="true"] {
     display: none;
-}
-
-#userInput {
-    width: 500px;
 }
