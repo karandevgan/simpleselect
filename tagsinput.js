@@ -706,7 +706,7 @@
         this.element.appendChild(this.container);
     }
 
-    _populateList = function _populateList() {
+    _populateList = function _populateList(isInit) {
         var wait, val, timer, promiseToResolve, fromServer;
         wait = 0;
         fromServer = this.config.fromServer;
@@ -720,14 +720,18 @@
             // If the choices is an Array set it as data. This is ignored if fromServer is set to true
             this.data = this.config.choices;
             this.isListPopulated = true;
-            this._render(true);
+            if (!isInit) {
+                this._render(true);
+            }
         } else if (getTypeOf(this.config.choices) === 'Function') {
             // If the choices are coming from a Promise, then resolve the promise and set it as data.
             // Call goes here everytime is type is autocomplete and fromServer is true to populate list on input change.
             // In case of select, call goes only once, for the first time to populate list.
             this.currentTimerId = setTimeout(function _populateListTimeout() {
                 if (this.currentTimerId) {
-                    this._setLoading(true);
+                    if (!isInit) {
+                        this._setLoading(true);
+                    }
                 }
                 promiseToResolve = this.config.choices(val);
                 promiseToResolve
@@ -735,7 +739,9 @@
                         if (timer === this.currentTimerId) {
                             this.data = data;
                             this.isListPopulated = true;
-                            this._render(!fromServer || this.type !== 'autocomplete');
+                            if (!isInit) {
+                                this._render(!fromServer || this.type !== 'autocomplete');
+                            }
                             this._setLoading(false);
                         }
                     }.bind(this)).catch(function (error) {
@@ -850,11 +856,15 @@
 
         allInitializedElements[tagsIdentityCount++] = this;
 
+        if (this.config.fromServer && this.type !== 'autocomplete' && this.config.loadOnce) {
+            this._populateList(true);
+        }
+
+        document.addEventListener('click', _handleOutsideClick.bind(this));
         if (getTypeOf(this.config.onInit) === 'Function') {
             fn = this.config.onInit;
             _callCallback.call(this, fn);
         }
-        document.addEventListener('click', _handleOutsideClick.bind(this));
         return this;
     }
 
