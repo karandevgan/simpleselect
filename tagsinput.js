@@ -8,7 +8,7 @@
     }
 })(this, function () {
     'use strict';
-    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount;
+    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount, assignDeep, getTypeOf;
     tagsIdentityCount = 1;
     allInitializedElements = {};
 
@@ -70,7 +70,11 @@
         onItemRemove: null
     };
 
-    function assignDeep(target, varArgs) { // .length of function is 2
+    getTypeOf = function getTypeOf(obj) {
+        return Object.prototype.toString.call(obj).slice(8, -1);
+    }
+
+    assignDeep = function assignDeep(target, varArgs) { // .length of function is 2
         'use strict';
         if (target == null) { // TypeError if undefined or null
             throw new TypeError('Cannot convert undefined or null to object');
@@ -122,7 +126,7 @@
 
     function TagsInput(element, userOptions) {
         var elements, i, e1;
-        if (typeof element === 'string') {
+        if (getTypeOf(element) === 'String') {
             elements = document.querySelectorAll(element);
             if (elements.length > 1) {
                 i = 1;
@@ -142,7 +146,7 @@
         userOptions = userOptions || {};
         this.highlightPosition = -1;
         this.config = extend(defaultOptions, userOptions);
-        this.element = typeof element === 'string' ? document.querySelector(element) : element;
+        this.element = getTypeOf(element) === 'String' ? document.querySelector(element) : element;
         this.type = element.dataset.tagsType;
         this.isListVisible = false;
         this.prevText = '';
@@ -266,7 +270,7 @@
         }
         if (data && data.length) {
             data.forEach(function (item, index) {
-                if (typeof item[keyAttr] === 'string' && typeof item[valAttr] === 'string') {
+                if (getTypeOf(item[keyAttr]) === 'String' && getTypeOf(item[valAttr]) === 'String') {
                     itemEl = this._getTemplate('listItem', index, item[keyAttr], item[valAttr]);
                     if (_isItemPresentInList(item, this.selectedItems, this.config.key, 'key')) {
                         itemEl.classList.add(this.config.classes.optionSelected);
@@ -275,7 +279,7 @@
                     itemEl.addEventListener('mouseout', _handleMouseOut.bind(this));
                     itemEl.addEventListener('click', _handleMouseClick.bind(this));
                     list.appendChild(itemEl);
-                    if (typeof this.config.onItemCreate === 'function') {
+                    if (getTypeOf(this.config.onItemCreate) === 'Function') {
                         fn = this.config.onItemCreate;
                         _callCallback.call(this, fn);
                     }
@@ -580,7 +584,7 @@
         $input = this.container.querySelector('[data-tags-element="input"]');
         if (!_isItemPresentInList(selectedItem, items, 'key', 'key')) {
             items.push(selectedItem);
-            if (typeof this.config.onItemSelect === 'function') {
+            if (getTypeOf(this.config.onItemSelect) === 'Function') {
                 fn = this.config.onItemSelect;
                 _callCallback.call(this, fn);
             }
@@ -640,7 +644,7 @@
         if (this.disabled) {
             return;
         }
-        if (typeof this.config.onItemRemove === 'function') {
+        if (getTypeOf(this.config.onItemRemove) === 'Function') {
             fn = this.config.onItemRemove;
             _callCallback.call(this, fn);
         }
@@ -750,12 +754,12 @@
             // Request is sent to server for the autocomplete only.
             wait = this.config.debounce;
         }
-        if (typeof this.config.choices === 'object' && !fromServer) {
+        if (getTypeOf(this.config.choices) === 'Array' && !fromServer) {
             // If the choices is an Array set it as data. This is ignored if fromServer is set to true
             this.data = this.config.choices;
             this.isListPopulated = true;
             this._render(true);
-        } else if (typeof this.config.choices === 'function') {
+        } else if (getTypeOf(this.config.choices) === 'Function') {
             // If the choices are coming from a Promise, then resolve the promise and set it as data.
             // Call goes here everytime is type is autocomplete and fromServer is true to populate list on input change.
             // In case of select, call goes only once, for the first time to populate list.
@@ -837,9 +841,8 @@
             return;
         }
 
-        typeofChoices = typeof this.config.choices;
-        if ((typeofChoices !== 'function' && typeofChoices !== 'object') ||
-            (typeofChoices === 'object' && typeof this.config.choices.length === 'undefined')) {
+        typeofChoices = getTypeOf(this.config.choices);
+        if (typeofChoices !== 'Function' && typeofChoices !== 'Array') {
             console.error('Please give choices: Promise or List');
             return;
         }
@@ -859,18 +862,19 @@
         document.addEventListener('click', _handleOutsideClick.bind(this));
 
         items = this.config.items;
-        if (typeof items === 'object' && typeof items.length !== 'undefined') {
-            items.some(function (item) {
-                key = item[this.config.key];
-                value = item[this.config.value];
-                return !this._pushItem({ key: key, value: value });
-            }.bind(this));
-        } else {
+        if (getTypeOf(items) !== 'Array') {
             console.error('Items should be an array of objects');
+            return;
         }
+        items.some(function (item) {
+            key = item[this.config.key];
+            value = item[this.config.value];
+            return !this._pushItem({ key: key, value: value });
+        }.bind(this));
+
         allInitializedElements[tagsIdentityCount++] = this;
 
-        if (typeof this.config.onInit === 'function') {
+        if (getTypeOf(this.config.onInit) === 'Function') {
             fn = this.config.onInit;
             _callCallback.call(this, fn);
         }
