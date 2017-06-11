@@ -8,7 +8,7 @@
     }
 })(this, function () {
     'use strict';
-    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount, assignDeep, getTypeOf, _createTemplates, _getTemplate, _render, _clearList, _handleInputChange, _searchList, _handleMouseClick, _handleKeyPress, _handleEscape, _handleEnter, _handleUpArrow, _handleDownArrow, _handleMouseOver, _handleMouseOut, _handleOutsideClick, _handleBlurEvent, _handleInputFocus, _handleMultiSelectFocus, _clearInput, _hightlightElement, _selectElement, _pushItem, _removeInput, _handleRemoveElement, _removeElement, _isItemPresentInList, _createInput, _populateList, getValues, setEnabled, _callCallback, _setLoading, init;
+    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount, assignDeep, getTypeOf, _createTemplates, _getTemplate, _render, _clearList, _handleInputChange, _searchList, _handleMouseClick, _handleKeyPress, _handleEscape, _handleEnter, _handleUpArrow, _handleDownArrow, _handleMouseOver, _handleMouseOut, _handleOutsideClick, _handleBlurEvent, _handleInputFocus, _handleMultiSelectFocus, _handleItemClick, _clearInput, _hightlightElement, _selectElement, _pushItem, _removeInput, _handleRemoveElement, _removeElement, _isItemPresentInList, _createInput, _populateList, getValues, setEnabled, _callCallback, _setLoading, init;
 
     tagsIdentityCount = 1;
     allInitializedElements = {};
@@ -18,7 +18,8 @@
         27: 'ESCAPE',
         40: 'DOWN_ARROW',
         38: 'UP_ARROW',
-        8: 'BACKSPACE'
+        8: 'BACKSPACE',
+        9: 'TAB'
     };
 
     defaultOptions = {
@@ -53,7 +54,7 @@
             wrapper: '<div class="%WRAPPER_CLASS%" data-tags-element="item-wrapper"></div>',
             caretSign: '<span class="%CARET_CLASS%" data-tags-element="caret">&#9660;</span>',
             selectDisplay: '<div class="%SINGLE_SELECT_ITEM_CLASS%" data-tags-element="display-holder">%PLACEHOLDER%</div>',
-            input: '<input class="%INPUT_CLASS%" data-tags-element="input" placeholder="%PLACEHOLDER%" />',
+            input: '<input class="%INPUT_CLASS%" data-tags-element="input" placeholder="%PLACEHOLDER%" tabindex="-1" />',
             list: '<ul class="%LIST_CLASS%" data-tags-element="list"></ul>',
             listItem: '<li class="%OPTION_CLASS%" data-tags-element="option" data-index="%INDEX%" data-key="%KEY%" data-value="%VALUE%">%VALUE%</li>',
             listWrapper: '<div class="%MULTI_WRAPPER_CLASS%" data-tags-element="multiselect-wrapper"></div>',
@@ -70,6 +71,7 @@
         onInit: null,
         onItemCreate: null,
         onItemSelect: null,
+        onItemClick: null,
         onItemRemove: null,
         loadingText: 'Loading'
     };
@@ -84,9 +86,9 @@
             throw new TypeError('Cannot convert undefined or null to object');
         }
 
-        var to = Object(target);
+        var to = {};
 
-        for (var index = 1; index < arguments.length; index++) {
+        for (var index = 0; index < arguments.length; index++) {
             var nextSource = arguments[index];
 
             if (nextSource != null) { // Skip over if undefined or null
@@ -318,6 +320,12 @@
             }
         } else if (keyMap[currentKey]) {
             this._handleKeyPress(keyMap[currentKey]);
+        }
+    }
+
+    _handleItemClick = function (e) {
+        if (!this.disabled) {
+            _callCallback.call(this, this.config.onItemClick);
         }
     }
 
@@ -553,6 +561,9 @@
                 $spanWrapper = this._getTemplate('selectedItemWrapper');
                 $span = this._getTemplate('selectedItem', selectedItem.key, selectedItem.value);
                 $remove = this._getTemplate('removeIcon');
+                if (getTypeOf(this.config.onItemClick) === 'Function') {
+                    $span.addEventListener('click', _handleItemClick.bind(this));
+                }
                 $spanWrapper.appendChild($span);
                 $spanWrapper.appendChild($remove);
                 $remove.addEventListener('click', _handleRemoveElement.bind(this));
@@ -825,9 +836,7 @@
 
         this._createTemplates();
         this._createInput();
-
-        document.addEventListener('click', _handleOutsideClick.bind(this));
-
+ 
         items = this.config.items;
         if (getTypeOf(items) !== 'Array') {
             console.error('Items should be an array of objects');
@@ -845,7 +854,7 @@
             fn = this.config.onInit;
             _callCallback.call(this, fn);
         }
-
+        document.addEventListener('click', _handleOutsideClick.bind(this));
         return this;
     }
 
@@ -894,6 +903,7 @@
     TagsInput.prototype._handleInputChange = _handleInputChange;
     TagsInput.prototype._handleMouseOver = _handleMouseOver;
     TagsInput.prototype._handleMouseOut = _handleMouseOut;
+    TagsInput.prototype._handleItemClick = _handleItemClick;
     TagsInput.prototype._handleKeyPress = _handleKeyPress;
     TagsInput.prototype._handleEscape = _handleEscape;
     TagsInput.prototype._handleEnter = _handleEnter;
