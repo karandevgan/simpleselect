@@ -1,7 +1,7 @@
 (function (root, factory) {
     if (typeof define === 'function' && define.amd) {
         define([], factory);
-    } else if (typeof module === 'object' && module.exports) {
+    } else if (typeof module === 'object' && typeof exports === 'object') {
         module.exports = factory();
     } else {
         root.TagsInput = factory();
@@ -63,7 +63,11 @@
         key: 'id',
         value: 'name',
         searchBy: 'value',
-        fromServer: false
+        fromServer: false,
+        onInit: null,
+        onItemCreate: null,
+        onItemSelect: null,
+        onItemRemove: null
     };
 
     function assignDeep(target, varArgs) { // .length of function is 2
@@ -243,7 +247,7 @@
     }
 
     function _render(isFilter) {
-        var data, list, keyAttr, valAttr, itemEl, isListWrapperPresent, d, listWrapper, input, attributeToBeUsed;
+        var data, list, keyAttr, valAttr, itemEl, isListWrapperPresent, d, listWrapper, input, attributeToBeUsed, fn;
 
         list = this._getTemplate('list');
         keyAttr = this.config.key;
@@ -271,6 +275,10 @@
                     itemEl.addEventListener('mouseout', _handleMouseOut.bind(this));
                     itemEl.addEventListener('click', _handleMouseClick.bind(this));
                     list.appendChild(itemEl);
+                    if (typeof this.config.onItemCreate === 'function') {
+                        fn = this.config.onItemCreate;
+                        _callCallback.call(this, fn);
+                    }
                 }
             }.bind(this));
             isListWrapperPresent = true;
@@ -344,14 +352,8 @@
                 }
             } else if (this.type === 'single-select' || this.type === 'multi-select') {
                 if (this.type === 'single-select' && !this.prevText) {
-                    itemSelectedClass = this.config.classes.optionSelected;
-                    this.selectedItems = [];
-                    $selectedItems = this.container.querySelectorAll('.' + itemSelectedClass);
-                    if ($selectedItems) {
-                        var i = 0;
-                        for (; i < $selectedItems.length; i++) {
-                            $selectedItems[i].classList.remove(itemSelectedClass);
-                        }
+                    if (this.selectedItems && this.selectedItems[0]) {
+                        this._removeElement(this.selectedItems[0].key);
                     }
                 }
                 if (this.config.searchOption) {
@@ -569,7 +571,7 @@
     }
 
     function _pushItem(selectedItem) {
-        var items, $input, $spanWrapper, $span, $remove, $wrapper, $displayHolder;
+        var items, $input, $spanWrapper, $span, $remove, $wrapper, $displayHolder, fn;
         items = this.selectedItems;
         if (this.config.maxTags > 0 && items.length === this.config.maxTags) {
             console.error('Items exceed than maximum allowed items');
@@ -578,6 +580,10 @@
         $input = this.container.querySelector('[data-tags-element="input"]');
         if (!_isItemPresentInList(selectedItem, items, 'key', 'key')) {
             items.push(selectedItem);
+            if (typeof this.config.onItemSelect === 'function') {
+                fn = this.config.onItemSelect;
+                _callCallback.call(this, fn);
+            }
             if (this.type !== 'single-select') {
                 if (this.type === 'multi-select') {
                     $displayHolder = this.container.querySelector("[data-tags-element='display-holder']");
@@ -630,10 +636,26 @@
     }
 
     function _removeElement(key) {
+        var $selectedItems, i, j, $item, $itemWrapper, index, $el, item, fn;
         if (this.disabled) {
             return;
         }
-        var $selectedItems, i, j, $item, $itemWrapper, index, $el, item;
+        if (typeof this.config.onItemRemove === 'function') {
+            fn = this.config.onItemRemove;
+            _callCallback.call(this, fn);
+        }
+        index = -1;
+        i = 0;
+        for (; i < this.selectedItems.length; i++) {
+            item = this.selectedItems[i];
+            if (item.key === key) {
+                index = i;
+                break;
+            }
+        }
+        if (index !== -1) {
+            this.selectedItems.splice(index, 1);
+        }
 
         $selectedItems = this.container.querySelectorAll('[data-tags-element="selected-item"]');
         if ($selectedItems) {
@@ -649,18 +671,6 @@
             if ($item) {
                 $itemWrapper = $item.parentElement;
                 $itemWrapper.parentElement.removeChild($itemWrapper);
-                index = -1;
-                i = 0;
-                for (; i < this.selectedItems.length; i++) {
-                    item = this.selectedItems[i];
-                    if (item.key === key) {
-                        index = i;
-                        break;
-                    }
-                }
-                if (index !== -1) {
-                    this.selectedItems.splice(index, 1);
-                }
                 if (this.type !== 'multi-select' && this.config.maxTags > 0 && this.selectedItems.length < this.config.maxTags && !this.container.querySelector('[data-tags-element="input"]')) {
                     this._createInput();
                 }
@@ -815,8 +825,12 @@
         }
     }
 
+    function _callCallback(fn) {
+        fn.apply(this, Array.prototype.slice.call(arguments));
+    }
+
     function init() {
-        var items, key, value, typeofChoices, validTypes;
+        var items, key, value, typeofChoices, validTypes, fn;
         validTypes = ['autocomplete', 'single-select', 'multi-select'];
         if (!this.type || validTypes.indexOf(this.type) === -1) {
             console.error('Please Enter Valid Type In Element');
@@ -855,6 +869,12 @@
             console.error('Items should be an array of objects');
         }
         allInitializedElements[tagsIdentityCount++] = this;
+
+        if (typeof this.config.onInit === 'function') {
+            fn = this.config.onInit;
+            _callCallback.call(this, fn);
+        }
+
         return this;
     }
 
