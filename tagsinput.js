@@ -72,7 +72,8 @@
         onItemSelect: null,
         onItemClick: null,
         onItemRemove: null,
-        loadingText: 'Loading'
+        loadingText: 'Loading',
+        loadOnce: true
     };
 
     getTypeOf = function getTypeOf(obj) {
@@ -444,9 +445,9 @@
         maxTags = this.config.maxTags;
         if (!this.isListVisible) {
             if ((maxTags > 0 && this.selectedItems.length < maxTags) || maxTags === -1 || this.type === 'single-select') {
-                if (!this.isListPopulated)
+                if (!this.isListPopulated || !this.config.loadOnce) {
                     this._populateList();
-                else {
+                } else {
                     this._render();
                 }
             }
@@ -835,7 +836,7 @@
 
         this._createTemplates();
         this._createInput();
- 
+
         items = this.config.items;
         if (getTypeOf(items) !== 'Array') {
             console.error('Items should be an array of objects');
