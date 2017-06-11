@@ -6,13 +6,15 @@
     width: 100%;
     min-width: 160px;
     position: relative;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
 }
 
 .tags-input__wrapper {
     border: 1px solid black;
-    padding: 0 22px 0 5px;
+    padding: 2px 28px 2px 5px;
     display: flex;
-    flex-wrap: wrap;
+    flex-flow: row wrap;
     min-height: 24px;
     position: relative;
 }
@@ -20,18 +22,37 @@
 .tags-input__display {
     height: 24px;
     line-height: 24px;
+    margin-left: 2px;
     cursor: default;
     color: gray;
+    font-size: 14px;
 }
 
 .tags-input__input {
     outline: none;
     border: none;
     cursor: default;
-    flex-grow: 100;
-    min-width: 50px;
-    height: 24px;
+    flex-grow: 1;
+    flex-basis: auto;
+    width: 100px;
+    height: inherit;
     box-sizing: border-box;
+    margin-left: 2px;
+    font-size: 14px;
+}
+
+.tags-input__input--multi {
+    width: 100%;
+    box-sizing: border-box;
+    outline: none;
+    border: none;
+    height: 24px;
+    padding: 7px;
+    font-size: 14px;
+}
+
+.tags-input__input:focus {
+    cursor: text;
 }
 
 .tags-input__input[data-tags-disabled="true"] {
@@ -58,25 +79,12 @@
     z-index: 100;
 }
 
-.tags-input__input--multi {
-    width: 100%;
-    box-sizing: border-box;
-    outline: none;
-    border: none;
-    height: 24px;
-    padding: 5px;
-}
-
-.tags-input__input:focus {
-    cursor: text;
-}
-
 .tags-input__loading {
     display: block;
     cursor: pointer;
     width: 100%;
     box-sizing: border-box;
-    padding: 5px;
+    padding: 5px 8px;
     background-color: white;
     border: 1px solid gray;
 }
@@ -96,7 +104,7 @@
     cursor: pointer;
     width: 100%;
     box-sizing: border-box;
-    padding: 5px;
+    padding: 5px 8px;
     background-color: white;
     border-top: 1px solid gray;
 }
@@ -112,16 +120,18 @@
 
 .tags-input__option--selected {
     color: white;
-    background-color: blue;
+    background-color: #5763E5;
 }
 
 .tags-input__item-wrapper {
-    max-width: 150px;
+    box-sizing: border-box;
     position: relative;
-    background-color: blue;
+    background-color: #5763E5;
+    border: 1px solid #5763E5;
+    border-radius: 10px;
     color: white;
-    height: 20px;
-    margin: 2px;
+    max-height: 22px;
+    margin: 1px 1px 1px 0px;
     line-height: 20px;
     cursor: default;
 }
@@ -131,15 +141,27 @@
 }
 
 .tags-input__item {
-    padding: 2px 20px 2px 2px;
+    max-width: 150px;
+    overflow: hidden;
+    display: inline-block;
+    max-height: 22px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 25px 0 8px;
 }
 
 .tags-input__item__remove {
     position: absolute;
-    right: 3px;
+    right: 8px;
     top: 50%;
     transform: translateY(-50%);
-    cursor: pointer
+    cursor: pointer;
+    font-family: Arial, Helvetica, sans-serif;
+    transition: color 0.3s;
+}
+
+.tags-input__item__remove:hover {
+    color: #C3C8FF;
 }
 
 .tags-input__item__remove[data-tags-disabled="true"] {

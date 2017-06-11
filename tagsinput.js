@@ -8,7 +8,8 @@
     }
 })(this, function () {
     'use strict';
-    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount, assignDeep, getTypeOf;
+    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount, assignDeep, getTypeOf, _createTemplates, _getTemplate, _render, _clearList, _handleInputChange, _searchList, _handleMouseClick, _handleKeyPress, _handleEscape, _handleEnter, _handleUpArrow, _handleDownArrow, _handleMouseOver, _handleMouseOut, _handleOutsideClick, _handleBlurEvent, _handleInputFocus, _handleMultiSelectFocus, _clearInput, _hightlightElement, _selectElement, _pushItem, _removeInput, _handleRemoveElement, _removeElement, _isItemPresentInList, _createInput, _populateList, getValues, setEnabled, _callCallback, _setLoading, init;
+
     tagsIdentityCount = 1;
     allInitializedElements = {};
 
@@ -127,66 +128,7 @@
         };
     }());
 
-    function TagsInput(element, userOptions) {
-        var elements, i, e1;
-        if (getTypeOf(element) === 'String') {
-            elements = document.querySelectorAll(element);
-            if (elements.length > 1) {
-                i = 1;
-                for (; i < elements.length; i++) {
-                    e1 = elements[i];
-                    new TagsInput(e1, userOptions);
-                }
-            }
-            element = elements[0];
-        } else {
-            element = element;
-        }
-        if (element && element.dataset.tagsId) {
-            return allInitializedElements[element.dataset.tagsId];
-        }
-        element.dataset.tagsId = tagsIdentityCount;
-        userOptions = userOptions || {};
-        this.highlightPosition = -1;
-        this.config = extend(defaultOptions, userOptions);
-        this.element = getTypeOf(element) === 'String' ? document.querySelector(element) : element;
-        this.type = element.dataset.tagsType;
-        this.isListVisible = false;
-        this.prevText = '';
-        this.selectedItems = [];
-        this.data = [];
-        this.isListPopulated = false;
-        this.currentTimerId = null;
-        this.init();
-    }
-
-    TagsInput.prototype.init = init;
-    TagsInput.prototype.getValues = getValues;
-    TagsInput.prototype.setEnabled = setEnabled;
-    TagsInput.prototype._render = _render;
-    TagsInput.prototype._clearList = _clearList;
-    TagsInput.prototype._createTemplates = _createTemplates;
-    TagsInput.prototype._createInput = _createInput;
-    TagsInput.prototype._getTemplate = _getTemplate;
-    TagsInput.prototype._populateList = _populateList;
-    TagsInput.prototype._handleInputChange = _handleInputChange;
-    TagsInput.prototype._handleMouseOver = _handleMouseOver;
-    TagsInput.prototype._handleMouseOut = _handleMouseOut;
-    TagsInput.prototype._handleKeyPress = _handleKeyPress;
-    TagsInput.prototype._handleEscape = _handleEscape;
-    TagsInput.prototype._handleEnter = _handleEnter;
-    TagsInput.prototype._handleDownArrow = _handleDownArrow;
-    TagsInput.prototype._handleUpArrow = _handleUpArrow;
-    TagsInput.prototype._hightlightElement = _hightlightElement;
-    TagsInput.prototype._pushItem = _pushItem;
-    TagsInput.prototype._selectElement = _selectElement;
-    TagsInput.prototype._removeElement = _removeElement;
-    TagsInput.prototype._clearInput = _clearInput;
-    TagsInput.prototype._searchList = _searchList;
-    TagsInput.prototype._removeInput = _removeInput;
-    TagsInput.prototype._setLoading = _setLoading;
-
-    function _createTemplates() {
+    _createTemplates = function _createTemplates() {
         var classes = this.config.classes;
         var templateStrings = this.config.templates;
         this.templates = {
@@ -250,7 +192,7 @@
         };
     }
 
-    function _getTemplate(template) {
+    _getTemplate = function _getTemplate(template) {
         var args, templates;
         args = Array.prototype.slice.call(arguments, 1);
         if (!template) return;
@@ -258,7 +200,7 @@
         return templates[template].apply(this, args);
     }
 
-    function _render(isFilter) {
+    _render = function _render(isFilter) {
         var data, list, keyAttr, valAttr, itemEl, isListWrapperPresent, d, listWrapper, input, attributeToBeUsed, fn;
 
         list = this._getTemplate('list');
@@ -322,7 +264,7 @@
         }
     }
 
-    function _clearList(isSelectSearch) {
+    _clearList = function _clearList(isSelectSearch) {
         var list;
         this.isListVisible = false;
         if (this.currentTimerId) {
@@ -343,7 +285,7 @@
         this.highlightPosition = -1;
     }
 
-    function _handleInputChange(e) {
+    _handleInputChange = function _handleInputChange(e) {
         var current, currentValue, currentKey, prevValue, isTextSame, itemSelectedClass, $selectedItems;
         current = e.currentTarget;
         currentValue = current.value || '';
@@ -379,18 +321,18 @@
         }
     }
 
-    function _searchList() {
+    _searchList = function _searchList() {
         // Pass isSearching parameter as true to retain the search input in case of select dropdowns
         this._clearList(true);
         // Pass isFilter true to local search for data in case of select list
         this._render(true);
     }
 
-    function _handleMouseClick(e) {
+    _handleMouseClick = function _handleMouseClick(e) {
         this._selectElement();
     }
 
-    function _handleKeyPress(key) {
+    _handleKeyPress = function _handleKeyPress(key) {
         switch (key) {
             case 'ESCAPE':
                 this._handleEscape();
@@ -408,12 +350,12 @@
 
     }
 
-    function _handleEscape() {
+    _handleEscape = function _handleEscape() {
         // Close the list on Escape key press
         this._clearList();
     }
 
-    function _handleEnter() {
+    _handleEnter = function _handleEnter() {
         if (this.highlightPosition == -1) {
             if (this.type === 'autocomplete' && !this.isListVisible) {
                 if (!this.isListPopulated || this.config.fromServer) {
@@ -427,7 +369,7 @@
         }
     }
 
-    function _handleUpArrow() {
+    _handleUpArrow = function _handleUpArrow() {
         var $listOptions;
         if (this.isListVisible) {
             $listOptions = this.container.querySelectorAll('[data-tags-element="option"]');
@@ -441,7 +383,7 @@
         }
     }
 
-    function _handleDownArrow() {
+    _handleDownArrow = function _handleDownArrow() {
         var $listOptions;
         if (this.isListVisible) {
             $listOptions = this.container.querySelectorAll('[data-tags-element="option"]');
@@ -455,7 +397,7 @@
         }
     }
 
-    function _handleMouseOver(e) {
+    _handleMouseOver = function _handleMouseOver(e) {
         var current, index;
         current = e.currentTarget;
         index = current.dataset.index;
@@ -463,14 +405,14 @@
         this._hightlightElement();
     }
 
-    function _handleMouseOut(e) {
+    _handleMouseOut = function _handleMouseOut(e) {
         var current;
         current = e.currentTarget;
         this.highlightPosition = -1;
         this._hightlightElement();
     }
 
-    function _handleOutsideClick(e) {
+    _handleOutsideClick = function _handleOutsideClick(e) {
         var target, $list;
         target = e.target;
         if (this.container) {
@@ -483,11 +425,11 @@
         }
     }
 
-    function _handleBlurEvent(e) {
+    _handleBlurEvent = function _handleBlurEvent(e) {
         this._clearInput();
     }
 
-    function _handleInputFocus(e) {
+    _handleInputFocus = function _handleInputFocus(e) {
         var maxTags;
         if (this.disabled) {
             return;
@@ -506,7 +448,7 @@
         }
     }
 
-    function _handleMultiSelectFocus(e) {
+    _handleMultiSelectFocus = function _handleMultiSelectFocus(e) {
         var target, data_element;
         target = e.target;
         data_element = target.dataset.tagsElement;
@@ -515,7 +457,7 @@
         }
     }
 
-    function _clearInput() {
+    _clearInput = function _clearInput() {
         var $input;
         $input = this.container.querySelector('[data-tags-element="input"]');
         if ($input) { // Clear input if no item is selected
@@ -529,7 +471,7 @@
         }
     }
 
-    function _hightlightElement(isKeyPressed) {
+    _hightlightElement = function _hightlightElement(isKeyPressed) {
         var $listElement, classes, highlightedClass, highlightedClassSelector, $listItems, $prevSelectedItem, $selectedItem;
         $listElement = this.container.querySelector('[data-tags-element="list"]');
         classes = this.config.classes;
@@ -549,7 +491,7 @@
         }
     }
 
-    function _selectElement() {
+    _selectElement = function _selectElement() {
         var classes, optionSelectedClass, optionSelectedClassSelector, $listElement, $listItems, $selectedItem, value, key, items, selectedItem, $allSelectedOptions, isItemAlreadySelected;
         if (this.disabled) {
             return;
@@ -587,7 +529,7 @@
         }
     }
 
-    function _pushItem(selectedItem) {
+    _pushItem = function _pushItem(selectedItem) {
         var items, $input, $spanWrapper, $span, $remove, $wrapper, $displayHolder, fn;
         items = this.selectedItems;
         if (this.config.maxTags > 0 && items.length === this.config.maxTags) {
@@ -637,7 +579,7 @@
         return true;
     }
 
-    function _removeInput() {
+    _removeInput = function _removeInput() {
         var $input;
         $input = this.container.querySelector('[data-tags-element="input"]');
         if ($input) {
@@ -645,14 +587,14 @@
         }
     }
 
-    function _handleRemoveElement(e) {
+    _handleRemoveElement = function _handleRemoveElement(e) {
         var element, key;
         element = e.currentTarget.parentElement.querySelector('[data-tags-element="selected-item"]');
         key = element.dataset.key;
         this._removeElement(key);
     }
 
-    function _removeElement(key) {
+    _removeElement = function _removeElement(key) {
         var $selectedItems, i, j, $item, $itemWrapper, index, $el, item, fn;
         if (this.disabled) {
             return;
@@ -698,7 +640,7 @@
         }
     }
 
-    function _isItemPresentInList(item, list, keyForItem, keyForList) {
+    _isItemPresentInList = function _isItemPresentInList(item, list, keyForItem, keyForList) {
         var index, element;
         if (list) {
             index = 0;
@@ -712,14 +654,7 @@
         return false;
     }
 
-    function _getWidth(el) {
-        var styles, margin;
-        styles = window.getComputedStyle(el);
-        margin = parseFloat(styles['margin-right']) + parseFloat(styles["margin-left"]);
-        return Math.ceil(el.offsetWidth + margin);
-    }
-
-    function _createInput() {
+    _createInput = function _createInput() {
         var container, wrapper, placeholder, input, displayHolder, type, isInit, caret;
         type = this.type;
         caret = this._getTemplate('caretSign');
@@ -743,7 +678,7 @@
                 caret.addEventListener('click', function () {
                     input.focus();
                 });
-                this.container.appendChild(caret);
+                wrapper.appendChild(caret);
             }
         } else {
             displayHolder = this._getTemplate('selectDisplay');
@@ -760,7 +695,7 @@
         this.element.appendChild(this.container);
     }
 
-    function _populateList() {
+    _populateList = function _populateList() {
         var wait, val, timer, promiseToResolve, fromServer;
         wait = 0;
         fromServer = this.config.fromServer;
@@ -800,7 +735,7 @@
         }
     }
 
-    function getValues(isWholeObjectRequested) {
+    getValues = function getValues(isWholeObjectRequested) {
         var returnArray;
         if (isWholeObjectRequested) {
             return this.selectedItems;
@@ -813,7 +748,7 @@
         }
     }
 
-    function setEnabled(isEnabled) {
+    setEnabled = function setEnabled(isEnabled) {
         var $caret, $removeIconsCollection, $input, disabledText, enabledPlaceholderText, $selectedItemsWrappers;
         this.disabled = !isEnabled;
         disabledText = !!!isEnabled ? 'true' : 'false';
@@ -849,11 +784,11 @@
         }
     }
 
-    function _callCallback(fn) {
+    _callCallback = function _callCallback(fn) {
         fn.apply(this, Array.prototype.slice.call(arguments));
     }
 
-    function _setLoading(isLoading) {
+    _setLoading = function _setLoading(isLoading) {
         var $loading;
         $loading = this.container.querySelector('[data-tags-element="loading"]');
         if ($loading) {
@@ -865,7 +800,7 @@
         }
     }
 
-    function init() {
+    init = function init() {
         var items, key, value, typeofChoices, validTypes, fn;
         validTypes = ['autocomplete', 'single-select', 'multi-select'];
         if (!this.type || validTypes.indexOf(this.type) === -1) {
@@ -913,6 +848,65 @@
 
         return this;
     }
+
+    function TagsInput(element, userOptions) {
+        var elements, i, e1;
+        if (getTypeOf(element) === 'String') {
+            elements = document.querySelectorAll(element);
+            if (elements.length > 1) {
+                i = 1;
+                for (; i < elements.length; i++) {
+                    e1 = elements[i];
+                    new TagsInput(e1, userOptions);
+                }
+            }
+            element = elements[0];
+        } else {
+            element = element;
+        }
+        if (element && element.dataset.tagsId) {
+            return allInitializedElements[element.dataset.tagsId];
+        }
+        element.dataset.tagsId = tagsIdentityCount;
+        userOptions = userOptions || {};
+        this.highlightPosition = -1;
+        this.config = extend(defaultOptions, userOptions);
+        this.element = getTypeOf(element) === 'String' ? document.querySelector(element) : element;
+        this.type = element.dataset.tagsType;
+        this.isListVisible = false;
+        this.prevText = '';
+        this.selectedItems = [];
+        this.data = [];
+        this.isListPopulated = false;
+        this.currentTimerId = null;
+        this.init();
+    }
+
+    TagsInput.prototype.init = init;
+    TagsInput.prototype.getValues = getValues;
+    TagsInput.prototype.setEnabled = setEnabled;
+    TagsInput.prototype._render = _render;
+    TagsInput.prototype._clearList = _clearList;
+    TagsInput.prototype._createTemplates = _createTemplates;
+    TagsInput.prototype._createInput = _createInput;
+    TagsInput.prototype._getTemplate = _getTemplate;
+    TagsInput.prototype._populateList = _populateList;
+    TagsInput.prototype._handleInputChange = _handleInputChange;
+    TagsInput.prototype._handleMouseOver = _handleMouseOver;
+    TagsInput.prototype._handleMouseOut = _handleMouseOut;
+    TagsInput.prototype._handleKeyPress = _handleKeyPress;
+    TagsInput.prototype._handleEscape = _handleEscape;
+    TagsInput.prototype._handleEnter = _handleEnter;
+    TagsInput.prototype._handleDownArrow = _handleDownArrow;
+    TagsInput.prototype._handleUpArrow = _handleUpArrow;
+    TagsInput.prototype._hightlightElement = _hightlightElement;
+    TagsInput.prototype._pushItem = _pushItem;
+    TagsInput.prototype._selectElement = _selectElement;
+    TagsInput.prototype._removeElement = _removeElement;
+    TagsInput.prototype._clearInput = _clearInput;
+    TagsInput.prototype._searchList = _searchList;
+    TagsInput.prototype._removeInput = _removeInput;
+    TagsInput.prototype._setLoading = _setLoading;
 
     return TagsInput;
 });
