@@ -8,7 +8,7 @@
     }
 })(this, function () {
     'use strict';
-    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount;
+    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount, polyfills;
     tagsIdentityCount = 1;
     allInitializedElements = {};
 
@@ -52,23 +52,37 @@
         fromServer: false
     };
 
-    extend = function (obj1, obj2) {
-        var returnObject, prop, i;
-        if (Object.extend) {
-            return Object.assign({}, obj1, obj2);
+    polyfills = function () {
+        if (typeof Object.assign != 'function') {
+            Object.assign = function (target, varArgs) { // .length of function is 2
+                'use strict';
+                if (target == null) { // TypeError if undefined or null
+                    throw new TypeError('Cannot convert undefined or null to object');
+                }
+
+                var to = Object(target);
+
+                for (var index = 1; index < arguments.length; index++) {
+                    var nextSource = arguments[index];
+
+                    if (nextSource != null) { // Skip over if undefined or null
+                        for (var nextKey in nextSource) {
+                            // Avoid bugs when hasOwnProperty is shadowed
+                            if (Object.prototype.hasOwnProperty.call(nextSource, nextKey)) {
+                                to[nextKey] = nextSource[nextKey];
+                            }
+                        }
+                    }
+                }
+                return to;
+            };
         }
-        returnObject = {};
-        if (typeof obj1 === 'object' && typeof obj2 === 'object') {
-            i = 0;
-            for (prop in obj1) {
-                obj1.hasOwnProperty(prop);
-                returnObject[prop] = obj1[prop];
-            }
-            for (prop in obj2) {
-                obj2.hasOwnProperty(prop);
-                returnObject[prop] = obj2[prop];
-            }
-        }
+    }
+
+    extend = function () {
+        var args, returnObject, prop, i;
+        args = Array.prototype.slice.call(arguments);
+        returnObject = Object.assign.apply(null, args);
         return returnObject;
     }
 
@@ -767,6 +781,7 @@
     }
 
     function init() {
+        polyfills();
         var items, key, value, typeofChoices;
         if (!this.type) {
             console.error('Please Enter Type In Element');
