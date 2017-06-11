@@ -1,4 +1,4 @@
-(function (root, factory) {
+; (function (root, factory) {
     if (typeof define === 'function' && define.amd) {
         define([], factory);
     } else if (typeof module === 'object' && typeof exports === 'object') {
@@ -78,7 +78,7 @@
 
     getTypeOf = function getTypeOf(obj) {
         return Object.prototype.toString.call(obj).slice(8, -1);
-    }
+    };
 
     assignDeep = function assignDeep(target, varArgs) { // .length of function is 2
         'use strict';
@@ -115,7 +115,7 @@
         args = Array.prototype.slice.call(arguments);
         returnObject = assignDeep.apply(null, args);
         return returnObject;
-    }
+    };
 
     strToEl = (function () {
         var tempEl, r
@@ -192,7 +192,7 @@
                     .replace(/%LOADING_TEXT%/g, loadingText));
             }
         };
-    }
+    };
 
     _getTemplate = function _getTemplate(template) {
         var args, templates;
@@ -200,7 +200,7 @@
         if (!template) return;
         templates = this.templates;
         return templates[template].apply(this, args);
-    }
+    };
 
     _render = function _render(isFilter) {
         var data, list, keyAttr, valAttr, itemEl, isListWrapperPresent, d, listWrapper, input, attributeToBeUsed, fn;
@@ -264,7 +264,7 @@
             }
             this.isListVisible = true;
         }
-    }
+    };
 
     _clearList = function _clearList(isSelectSearch) {
         var list;
@@ -285,7 +285,7 @@
             this.data = [];
         }
         this.highlightPosition = -1;
-    }
+    };
 
     _handleInputChange = function _handleInputChange(e) {
         var current, currentValue, currentKey, prevValue, isTextSame, itemSelectedClass, $selectedItems;
@@ -321,24 +321,24 @@
         } else if (keyMap[currentKey]) {
             this._handleKeyPress(keyMap[currentKey]);
         }
-    }
+    };
 
     _handleItemClick = function (e) {
         if (!this.disabled) {
             _callCallback.call(this, this.config.onItemClick);
         }
-    }
+    };
 
     _searchList = function _searchList() {
         // Pass isSearching parameter as true to retain the search input in case of select dropdowns
         this._clearList(true);
         // Pass isFilter true to local search for data in case of select list
         this._render(true);
-    }
+    };
 
     _handleMouseClick = function _handleMouseClick(e) {
         this._selectElement();
-    }
+    };
 
     _handleKeyPress = function _handleKeyPress(key) {
         switch (key) {
@@ -356,12 +356,12 @@
                 break;
         }
 
-    }
+    };
 
     _handleEscape = function _handleEscape() {
         // Close the list on Escape key press
         this._clearList();
-    }
+    };
 
     _handleEnter = function _handleEnter() {
         if (this.highlightPosition == -1) {
@@ -375,7 +375,7 @@
         } else {
             this._selectElement();
         }
-    }
+    };
 
     _handleUpArrow = function _handleUpArrow() {
         var $listOptions;
@@ -389,7 +389,7 @@
             // Pass isKeyPressed as true
             this._hightlightElement(true);
         }
-    }
+    };
 
     _handleDownArrow = function _handleDownArrow() {
         var $listOptions;
@@ -403,7 +403,7 @@
             // Pass isKeyPressed as true
             this._hightlightElement(true);
         }
-    }
+    };
 
     _handleMouseOver = function _handleMouseOver(e) {
         var current, index;
@@ -411,14 +411,14 @@
         index = current.dataset.index;
         this.highlightPosition = index;
         this._hightlightElement();
-    }
+    };
 
     _handleMouseOut = function _handleMouseOut(e) {
         var current;
         current = e.currentTarget;
         this.highlightPosition = -1;
         this._hightlightElement();
-    }
+    };
 
     _handleOutsideClick = function _handleOutsideClick(e) {
         var target, $list;
@@ -431,11 +431,11 @@
                 }
             }
         }
-    }
+    };
 
     _handleBlurEvent = function _handleBlurEvent(e) {
         this._clearInput();
-    }
+    };
 
     _handleInputFocus = function _handleInputFocus(e) {
         var maxTags;
@@ -454,7 +454,7 @@
         } else {
             this._clearList();
         }
-    }
+    };
 
     _handleMultiSelectFocus = function _handleMultiSelectFocus(e) {
         var target, data_element;
@@ -463,7 +463,7 @@
         if (!data_element || (data_element !== 'selected-item' && data_element !== 'remove-item')) {
             _handleInputFocus.call(this, e);
         }
-    }
+    };
 
     _clearInput = function _clearInput() {
         var $input;
@@ -477,7 +477,7 @@
                 this.prevText = this.selectedItems[0].value.trim().toLowerCase();
             }
         }
-    }
+    };
 
     _hightlightElement = function _hightlightElement(isKeyPressed) {
         var $listElement, classes, highlightedClass, highlightedClassSelector, $listItems, $prevSelectedItem, $selectedItem;
@@ -497,7 +497,7 @@
                 $listElement.scrollTop = $selectedItem.offsetTop - $listElement.clientHeight + $selectedItem.clientHeight;
             }
         }
-    }
+    };
 
     _selectElement = function _selectElement() {
         var classes, optionSelectedClass, optionSelectedClassSelector, $listElement, $listItems, $selectedItem, value, key, items, selectedItem, $allSelectedOptions, isItemAlreadySelected;
@@ -535,7 +535,7 @@
             }
             this._pushItem(selectedItem);
         }
-    }
+    };
 
     _pushItem = function _pushItem(selectedItem) {
         var items, $input, $spanWrapper, $span, $remove, $wrapper, $displayHolder, fn;
@@ -588,7 +588,7 @@
             }
         }
         return true;
-    }
+    };
 
     _removeInput = function _removeInput() {
         var $input;
@@ -596,14 +596,14 @@
         if ($input) {
             $input.parentElement.removeChild($input);
         }
-    }
+    };
 
     _handleRemoveElement = function _handleRemoveElement(e) {
         var element, key;
         element = e.currentTarget.parentElement.querySelector('[data-tags-element="selected-item"]');
         key = element.dataset.key;
         this._removeElement(key);
-    }
+    };
 
     _removeElement = function _removeElement(key) {
         var $selectedItems, i, j, $item, $itemWrapper, index, $el, item, fn;
@@ -649,7 +649,7 @@
                 }
             }
         }
-    }
+    };
 
     _isItemPresentInList = function _isItemPresentInList(item, list, keyForItem, keyForList) {
         var index, element;
@@ -663,7 +663,7 @@
             }
         }
         return false;
-    }
+    };
 
     _createInput = function _createInput() {
         var container, wrapper, placeholder, input, displayHolder, type, isInit, caret;
@@ -704,7 +704,7 @@
             this.container.appendChild(this._getTemplate('loading', this.config.loadingText));
         }
         this.element.appendChild(this.container);
-    }
+    };
 
     _populateList = function _populateList(isInit) {
         var wait, val, timer, promiseToResolve, fromServer;
@@ -750,7 +750,7 @@
             }.bind(this), wait);
             timer = this.currentTimerId;
         }
-    }
+    };
 
     getValues = function getValues(isWholeObjectRequested) {
         var returnArray;
@@ -763,7 +763,7 @@
             });
             return returnArray;
         }
-    }
+    };
 
     setEnabled = function setEnabled(isEnabled) {
         var $caret, $removeIconsCollection, $input, disabledText, enabledPlaceholderText, $selectedItemsWrappers;
@@ -799,11 +799,11 @@
             }
             $input.placeholder = !!!isEnabled ? '' : enabledPlaceholderText;
         }
-    }
+    };
 
     _callCallback = function _callCallback(fn) {
         fn.apply(this, Array.prototype.slice.call(arguments));
-    }
+    };
 
     _setLoading = function _setLoading(isLoading) {
         var $loading;
@@ -815,7 +815,7 @@
                 $loading.style.display = 'none';
             }
         }
-    }
+    };
 
     init = function init() {
         var items, key, value, typeofChoices, validTypes, fn;
@@ -866,7 +866,7 @@
             _callCallback.call(this, fn);
         }
         return this;
-    }
+    };
 
     function TagsInput(element, userOptions) {
         var elements, i, e1;
@@ -899,7 +899,7 @@
         this.isListPopulated = false;
         this.currentTimerId = null;
         this.init();
-    }
+    };
 
     TagsInput.prototype.init = init;
     TagsInput.prototype.getValues = getValues;
