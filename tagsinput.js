@@ -8,7 +8,7 @@
     }
 })(this, function () {
     'use strict';
-    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount, polyfills;
+    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount;
     tagsIdentityCount = 1;
     allInitializedElements = {};
 
@@ -46,43 +46,60 @@
             multiselectInput: 'tags-input__input--multi',
             caretSign: 'tags-input__caret'
         },
+        templates: {
+            container: '<div class="%CONTAINER_CLASS%"></div>',
+            wrapper: '<div class="%WRAPPER_CLASS%" data-tags-element="item-wrapper"></div>',
+            caretSign: '<span class="%CARET_CLASS%" data-tags-element="caret">&#9660;</span>',
+            selectDisplay: '<div class="%SINGLE_SELECT_ITEM_CLASS%" data-tags-element="display-holder">%PLACEHOLDER%</div>',
+            input: '<input class="%INPUT_CLASS%" data-tags-element="input" placeholder="%PLACEHOLDER%" />',
+            list: '<ul class="%LIST_CLASS%" data-tags-element="list"></ul>',
+            listItem: '<li class="%OPTION_CLASS%" data-tags-element="option" data-index="%INDEX%" data-key="%KEY%" data-value="%VALUE%">%VALUE%</li>',
+            listWrapper: '<div class="%MULTI_WRAPPER_CLASS%" data-tags-element="multiselect-wrapper"></div>',
+            selectedItemWrapper: '<span class="%ITEM_WRAPPER_CLASS%" data-tags-element="selected-item-wrapper"></span>',
+            selectedItem: '<span class="%ITEM_CLASS%" data-key="%KEY%" data-tags-element="selected-item">%VALUE%</span>',
+            removeIcon: '<span class="%REMOVE_ITEM_CLASS%" data-tags-element="remove-item">X</span>'
+
+        },
         key: 'id',
         value: 'name',
         searchBy: 'value',
         fromServer: false
     };
 
-    polyfills = function () {
-        if (typeof Object.assign != 'function') {
-            Object.assign = function (target, varArgs) { // .length of function is 2
-                'use strict';
-                if (target == null) { // TypeError if undefined or null
-                    throw new TypeError('Cannot convert undefined or null to object');
-                }
+    function assignDeep(target, varArgs) { // .length of function is 2
+        'use strict';
+        if (target == null) { // TypeError if undefined or null
+            throw new TypeError('Cannot convert undefined or null to object');
+        }
 
-                var to = Object(target);
+        var to = Object(target);
 
-                for (var index = 1; index < arguments.length; index++) {
-                    var nextSource = arguments[index];
+        for (var index = 1; index < arguments.length; index++) {
+            var nextSource = arguments[index];
 
-                    if (nextSource != null) { // Skip over if undefined or null
-                        for (var nextKey in nextSource) {
-                            // Avoid bugs when hasOwnProperty is shadowed
-                            if (Object.prototype.hasOwnProperty.call(nextSource, nextKey)) {
-                                to[nextKey] = nextSource[nextKey];
+            if (nextSource != null) { // Skip over if undefined or null
+                for (var nextKey in nextSource) {
+                    // Avoid bugs when hasOwnProperty is shadowed
+                    if (Object.prototype.hasOwnProperty.call(nextSource, nextKey)) {
+                        if (Object.prototype.toString.call(nextSource[nextKey]) === '[object Object]') {
+                            if (!to[nextKey]) {
+                                to[nextKey] = {};
                             }
+                            to[nextKey] = assignDeep(to[nextKey], nextSource[nextKey]);
+                        } else {
+                            to[nextKey] = nextSource[nextKey];
                         }
                     }
                 }
-                return to;
-            };
+            }
         }
-    }
+        return to;
+    };
 
     extend = function () {
         var args, returnObject, prop, i;
         args = Array.prototype.slice.call(arguments);
-        returnObject = Object.assign.apply(null, args);
+        returnObject = assignDeep.apply(null, args);
         return returnObject;
     }
 
@@ -160,57 +177,59 @@
 
     function _createTemplates() {
         var classes = this.config.classes;
-        this.config.templates = {
+        var templateStrings = this.config.templates;
+        this.templates = {
             container: function () {
-                return strToEl('<div class="%CONTAINER_CLASS%"></div>'
-                    .replace('%CONTAINER_CLASS%', classes.container));
+                return strToEl(templateStrings.container
+                    .replace(/%CONTAINER_CLASS%/g, classes.container));
             },
             wrapper: function () {
-                return strToEl('<div class="%WRAPPER_CLASS%" data-tags-element="item-wrapper"></div>'
-                    .replace('%WRAPPER_CLASS%', classes.wrapper));
+                return strToEl(templateStrings.wrapper
+                    .replace(/%WRAPPER_CLASS%/g, classes.wrapper));
             },
             caretSign: function () {
-                return strToEl('<span class="%CARET_CLASS%" data-tags-element="caret">&#9660;</span>'
-                    .replace('%CARET_CLASS%', classes.caretSign));
+                return strToEl(templateStrings.caretSign
+                    .replace(/%CARET_CLASS%/g, classes.caretSign));
             },
             selectDisplay: function () {
-                return strToEl('<div class="%SINGLE_SELECT_ITEM_CLASS%" data-tags-element="display-holder">%PLACEHOLDER%</div>'
-                    .replace('%SINGLE_SELECT_ITEM_CLASS%', classes.selectDisplay)
-                    .replace('%PLACEHOLDER%', this.config.placeholder));
+                return strToEl(templateStrings.selectDisplay
+                    .replace(/%SINGLE_SELECT_ITEM_CLASS%/g, classes.selectDisplay)
+                    .replace(/%PLACEHOLDER%/g, this.config.placeholder));
             },
             input: function (placeholder, inputClass) {
                 inputClass = inputClass || classes.input;
-                return strToEl('<input class="%INPUT_CLASS%" data-tags-element="input" placeholder="%PLACEHOLDER%" />'
-                    .replace('%INPUT_CLASS%', inputClass)
-                    .replace('%PLACEHOLDER%', placeholder));
+                return strToEl(templateStrings.input
+                    .replace(/%INPUT_CLASS%/g, inputClass)
+                    .replace(/%PLACEHOLDER%/g, placeholder));
             },
             list: function () {
-                return strToEl('<ul class="%LIST_CLASS%" data-tags-element="list"></ul>'
-                    .replace('%LIST_CLASS%', classes.list));
+                return strToEl(templateStrings.list
+                    .replace(/%LIST_CLASS%/g, classes.list));
             },
             listItem: function (index, key, value) {
-                return strToEl('<li class="%OPTION_CLASS%" data-tags-element="option" data-index="%INDEX%" data-key="%KEY%" data-value="%VALUE%">%VALUE%</li>'
-                    .replace('%OPTION_CLASS%', classes.option)
-                    .replace('%INDEX%', index)
-                    .replace('%KEY%', key)
+                return strToEl(templateStrings.listItem
+                    .replace(/%OPTION_CLASS%/g, classes.option)
+                    .replace(/%INDEX%/g, index)
+                    .replace(/%KEY%/g, key)
                     .replace(/%VALUE%/g, value));
             },
             listWrapper: function () {
-                return strToEl('<div class="%MULTI_WRAPPER_CLASS%" data-tags-element="multiselect-wrapper"></div>'
-                    .replace('%MULTI_WRAPPER_CLASS%', classes.listWrapper))
+                return strToEl(templateStrings.listWrapper
+                    .replace(/%MULTI_WRAPPER_CLASS%/g, classes.listWrapper))
             },
             selectedItemWrapper: function () {
-                return strToEl('<span class="%ITEM_WRAPPER_CLASS%" data-tags-element="selected-item-wrapper"></span>'.replace('%ITEM_WRAPPER_CLASS%', classes.itemWrapper));
+                return strToEl(templateStrings.selectedItemWrapper
+                    .replace(/%ITEM_WRAPPER_CLASS%/g, classes.itemWrapper));
             },
             selectedItem: function (key, value) {
-                return strToEl('<span class="%ITEM_CLASS%" data-key="%KEY%" data-tags-element="selected-item">%VALUE%</span>'
-                    .replace('%ITEM_CLASS%', classes.selectedItem)
+                return strToEl(templateStrings.selectedItem
+                    .replace(/%ITEM_CLASS%/g, classes.selectedItem)
                     .replace(/%KEY%/g, key)
                     .replace(/%VALUE%/g, value));
             },
             removeIcon: function () {
-                return strToEl('<span class="%REMOVE_ITEM_CLASS%" data-tags-element="remove-item">X</span>'
-                    .replace('%REMOVE_ITEM_CLASS%', classes.removeIcon));
+                return strToEl(templateStrings.removeIcon
+                    .replace(/%REMOVE_ITEM_CLASS%/g, classes.removeIcon));
             }
         };
     }
@@ -219,7 +238,7 @@
         var args, templates;
         args = Array.prototype.slice.call(arguments, 1);
         if (!template) return;
-        templates = this.config.templates;
+        templates = this.templates;
         return templates[template].apply(this, args);
     }
 
@@ -234,7 +253,7 @@
         } else {
             attributeToBeUsed = valAttr;
         }
-        if (isFilter) {
+        if (isFilter) { // Search using searchBy criteria locally if isFilter is true
             data = this.data.filter(function (item) {
                 return item[attributeToBeUsed].toString().toLowerCase().indexOf(this.prevText) !== -1;
             }.bind(this));
@@ -261,6 +280,8 @@
                 listWrapper = this._getTemplate('listWrapper');
                 isListWrapperPresent = false;
             }
+
+            // Add Search box in multiselect dropdown if searchOption is enabled
             if (this.type === 'multi-select' && this.config.searchOption) {
                 if (!isListWrapperPresent) {
                     input = this._getTemplate('input', this.config.placeholderSearch, this.config.classes.multiselectInput);
@@ -273,6 +294,7 @@
                 d.appendChild(listWrapper);
                 this.container.appendChild(d);
             }
+            // Set focus to search box of multiselect
             if (this.type === 'multi-select' && this.config.searchOption) {
                 listWrapper.querySelector('[data-tags-element="input"]').focus();
             }
@@ -280,13 +302,13 @@
         }
     }
 
-    function _clearList(isMultiSelectSearch) {
+    function _clearList(isSelectSearch) {
         var list;
         this.isListVisible = false;
         if (this.currentTimerId) {
             clearInterval(this.currentTimerId);
         }
-        if (isMultiSelectSearch) {
+        if (isSelectSearch) {
             list = this.container.querySelector('[data-tags-element="list"]');
         }
         else {
@@ -342,7 +364,9 @@
     }
 
     function _searchList() {
+        // Pass isSearching parameter as true to retain the search input in case of select dropdowns
         this._clearList(true);
+        // Pass isFilter true to local search for data in case of select list
         this._render(true);
     }
 
@@ -369,14 +393,18 @@
     }
 
     function _handleEscape() {
+        // Close the list on Escape key press
         this._clearList();
     }
 
     function _handleEnter() {
         if (this.highlightPosition == -1) {
             if (this.type === 'autocomplete') {
-                this._clearList();
-                this._populateList();
+                if (!this.isListPopulated || this.config.fromServer) {
+                    this._populateList();
+                } else if (!this.config.fromServer) {
+                    this._render(true);
+                }
             }
         } else {
             this._selectElement();
@@ -392,6 +420,7 @@
             } else {
                 this.highlightPosition -= 1;
             }
+            // Pass isKeyPressed as true
             this._hightlightElement(true);
         }
     }
@@ -405,6 +434,7 @@
             } else {
                 this.highlightPosition = 0;
             }
+            // Pass isKeyPressed as true
             this._hightlightElement(true);
         }
     }
@@ -472,11 +502,11 @@
     function _clearInput() {
         var $input;
         $input = this.container.querySelector('[data-tags-element="input"]');
-        if ($input) {
+        if ($input) { // Clear input if no item is selected
             if (this.type !== 'single-select' || this.selectedItems.length < 1) {
                 $input.value = '';
                 this.prevText = '';
-            } else {
+            } else { // Set textbox value to the item selected
                 $input.value = this.selectedItems[0].value;
                 this.prevText = this.selectedItems[0].value.trim().toLowerCase();
             }
@@ -497,7 +527,7 @@
         $selectedItem = $listItems[this.highlightPosition];
         if ($selectedItem) {
             $selectedItem.classList.add(highlightedClass);
-            if (isKeyPressed) {
+            if (isKeyPressed) { // Scroll the list if the item is not visible
                 $listElement.scrollTop = $selectedItem.offsetTop - $listElement.clientHeight + $selectedItem.clientHeight;
             }
         }
@@ -520,7 +550,6 @@
                 key: key,
                 value: value
             };
-            this.config.key, 'key'
             isItemAlreadySelected = _isItemPresentInList(selectedItem, this.selectedItems, 'key', 'key');
             if (isItemAlreadySelected) {
                 return;
@@ -667,14 +696,14 @@
         var container, wrapper, placeholder, input, displayHolder, type, isNewDisplayWrapper, caret;
         type = this.type;
         caret = this._getTemplate('caretSign');
-        if (!this.container) {
+        if (!this.container) { // If list is initialized for the first time
             container = this._getTemplate('container');
             wrapper = this._getTemplate('wrapper');
             isNewDisplayWrapper = true;
             this.container = container;
         } else {
             isNewDisplayWrapper = false;
-            wrapper = this.container.children[0];
+            wrapper = this.container.querySelector('[data-tags-element="item-wrapper"]');
         }
         placeholder = this.type === 'autocomplete' ? this.config.placeholderSearch : this.config.placeholder;
         if (this.type !== 'multi-select') {
@@ -707,13 +736,19 @@
         fromServer = this.config.fromServer;
         val = this.prevText;
         if (fromServer && this.type === 'autocomplete') {
+            // Set wait as debounce if request is needed to be sent to server.
+            // Request is sent to server for the autocomplete only.
             wait = this.config.debounce;
         }
         if (typeof this.config.choices === 'object' && !fromServer) {
+            // If the choices is an Array set it as data. This is ignored if fromServer is set to true
             this.data = this.config.choices;
             this.isListPopulated = true;
             this._render(true);
         } else if (typeof this.config.choices === 'function') {
+            // If the choices are coming from a Promise, then resolve the promise and set it as data.
+            // Call goes here everytime is type is autocomplete and fromServer is true to populate list on input change.
+            // In case of select, call goes only once, for the first time to populate list.
             this.currentTimerId = setTimeout(function _populateListTimeout() {
                 promiseToResolve = this.config.choices(val);
                 promiseToResolve
@@ -781,19 +816,21 @@
     }
 
     function init() {
-        polyfills();
-        var items, key, value, typeofChoices;
-        if (!this.type) {
-            console.error('Please Enter Type In Element');
+        var items, key, value, typeofChoices, validTypes;
+        validTypes = ['autocomplete', 'single-select', 'multi-select'];
+        if (!this.type || validTypes.indexOf(this.type) === -1) {
+            console.error('Please Enter Valid Type In Element');
             return;
         }
 
         typeofChoices = typeof this.config.choices;
-        if (typeofChoices !== 'function' && typeofChoices !== 'object') {
+        if ((typeofChoices !== 'function' && typeofChoices !== 'object') ||
+            (typeofChoices === 'object' && typeof this.config.choices.length === 'undefined')) {
             console.error('Please give choices: Promise or List');
             return;
         }
 
+        // if fromServer is true and type is autocomplete, then type of choices must be a promise
         if (this.config.fromServer && typeofChoices !== 'function' && this.type === 'autocomplete') {
             console.error('Choices must be a promise when fromserver is true');
         }
@@ -808,12 +845,14 @@
         document.addEventListener('click', _handleOutsideClick.bind(this));
 
         items = this.config.items;
-        if (items && items.length > 0) {
+        if (typeof items === 'object' && typeof items.length !== 'undefined') {
             items.some(function (item) {
                 key = item[this.config.key];
                 value = item[this.config.value];
                 return !this._pushItem({ key: key, value: value });
             }.bind(this));
+        } else {
+            console.error('Items should be an array of objects');
         }
         allInitializedElements[tagsIdentityCount++] = this;
         return this;
