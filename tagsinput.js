@@ -18,8 +18,7 @@
         27: 'ESCAPE',
         40: 'DOWN_ARROW',
         38: 'UP_ARROW',
-        8: 'BACKSPACE',
-        9: 'TAB'
+        8: 'BACKSPACE'
     };
 
     defaultOptions = {
