@@ -33,7 +33,7 @@
     flex-grow: 1;
     flex-basis: auto;
     width: 100px;
-    height: inherit;
+    height: 24px;
     box-sizing: border-box;
     margin-left: 2px;
     font-size: 14px;

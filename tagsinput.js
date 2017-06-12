@@ -8,7 +8,7 @@
     }
 })(this, function () {
     'use strict';
-    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount, assignDeep, getTypeOf, _createTemplates, _getTemplate, _render, _clearList, _handleInputChange, _searchList, _handleMouseClick, _handleKeyPress, _handleEscape, _handleEnter, _handleUpArrow, _handleDownArrow, _handleMouseOver, _handleMouseOut, _handleOutsideClick, _handleBlurEvent, _handleInputFocus, _handleMultiSelectFocus, _handleItemClick, _clearInput, _hightlightElement, _selectElement, _pushItem, _removeInput, _handleRemoveElement, _removeElement, _isItemPresentInList, _createInput, _populateList, getValues, setEnabled, _callCallback, _setLoading, init;
+    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount, assignDeep, getTypeOf, _createTemplates, _getTemplate, _render, _clearList, _handleInputChange, _searchList, _handleMouseClick, _handleKeyPress, _handleEscape, _handleEnter, _handleUpArrow, _handleDownArrow, _handleMouseOver, _handleMouseOut, _handleOutsideClick, _handleBlurEvent, _handleInputFocus, _handleMultiSelectFocus, _handleItemClick, _clearInput, _hightlightElement, _selectElement, _pushItem, _removeInput, _handleRemoveElement, _removeElement, _isItemPresentInList, _createInput, _populateList, getValues, setEnabled, _callCallback, _setLoading, reset, init;
 
     tagsIdentityCount = 1;
     allInitializedElements = {};
@@ -64,7 +64,7 @@
 
         },
         key: 'id',
-        value: 'name',
+        value: 'value',
         searchBy: 'value',
         fromServer: false,
         onInit: null,
@@ -72,7 +72,7 @@
         onItemSelect: null,
         onItemClick: null,
         onItemRemove: null,
-        loadingText: 'Loading',
+        loadingText: 'Loading...',
         loadOnce: true
     };
 
@@ -203,7 +203,7 @@
     };
 
     _render = function _render(isFilter) {
-        var data, list, keyAttr, valAttr, itemEl, isListWrapperPresent, d, listWrapper, input, attributeToBeUsed, fn;
+        var data, list, keyAttr, valAttr, itemEl, isListWrapperPresent, d, listWrapper, input, attributeToBeUsed, fn, item;
 
         list = this._getTemplate('list');
         keyAttr = this.config.key;
@@ -221,20 +221,22 @@
             data = this.data;
         }
         if (data && data.length) {
-            data.forEach(function (item, index) {
-                if (getTypeOf(item[keyAttr]) === 'String' && getTypeOf(item[valAttr]) === 'String') {
-                    itemEl = this._getTemplate('listItem', index, item[keyAttr], item[valAttr]);
-                    if (_isItemPresentInList(item, this.selectedItems, this.config.key, 'key')) {
-                        itemEl.classList.add(this.config.classes.optionSelected);
-                    }
-                    itemEl.addEventListener('mouseover', _handleMouseOver.bind(this));
-                    itemEl.addEventListener('mouseout', _handleMouseOut.bind(this));
-                    itemEl.addEventListener('click', _handleMouseClick.bind(this));
-                    list.appendChild(itemEl);
-                    if (getTypeOf(this.config.onItemCreate) === 'Function') {
-                        fn = this.config.onItemCreate;
-                        _callCallback.call(this, fn);
-                    }
+            data.forEach(function (itemFromList, index) {
+                if (!itemFromList || !itemFromList[keyAttr] || !itemFromList[valAttr]) {
+                    return;
+                }
+                item = { key: itemFromList[keyAttr].toString(), value: itemFromList[valAttr].toString() };
+                itemEl = this._getTemplate('listItem', index, item.key, item.value);
+                if (_isItemPresentInList(item, this.selectedItems, 'key', 'key')) {
+                    itemEl.classList.add(this.config.classes.optionSelected);
+                }
+                itemEl.addEventListener('mouseover', _handleMouseOver.bind(this));
+                itemEl.addEventListener('mouseout', _handleMouseOut.bind(this));
+                itemEl.addEventListener('click', _handleMouseClick.bind(this));
+                list.appendChild(itemEl);
+                if (getTypeOf(this.config.onItemCreate) === 'Function') {
+                    fn = this.config.onItemCreate;
+                    _callCallback.call(this, fn);
                 }
             }.bind(this));
             isListWrapperPresent = true;
@@ -641,13 +643,14 @@
             if ($item) {
                 $itemWrapper = $item.parentElement;
                 $itemWrapper.parentElement.removeChild($itemWrapper);
-                if (this.type !== 'multi-select' && this.config.maxTags > 0 && this.selectedItems.length < this.config.maxTags && !this.container.querySelector('[data-tags-element="input"]')) {
-                    this._createInput();
-                }
-                else if (this.type === 'multi-select' && this.selectedItems.length === 0) {
-                    this._createInput();
-                }
             }
+        }
+        this._clearInput();
+        if (this.type !== 'multi-select' && this.config.maxTags > 0 && this.selectedItems.length < this.config.maxTags && !this.container.querySelector('[data-tags-element="input"]')) {
+            this._createInput();
+        }
+        else if (this.type === 'multi-select' && this.selectedItems.length === 0) {
+            this._createInput();
         }
     };
 
@@ -695,15 +698,16 @@
             displayHolder = this._getTemplate('selectDisplay');
             if (isInit) {
                 wrapper.addEventListener('click', _handleMultiSelectFocus.bind(this));
+                wrapper.appendChild(displayHolder);
+                wrapper.appendChild(caret);
             }
-            wrapper.appendChild(displayHolder);
-            wrapper.appendChild(caret);
         }
-        this.container.appendChild(wrapper);
+
         if (isInit) {
+            this.container.appendChild(wrapper);
             this.container.appendChild(this._getTemplate('loading', this.config.loadingText));
+            this.element.appendChild(this.container);
         }
-        this.element.appendChild(this.container);
     };
 
     _populateList = function _populateList(isInit) {
@@ -721,11 +725,11 @@
             this.data = this.config.choices;
             this.isListPopulated = true;
             if (!isInit) {
-                this._render(true);
+                this._render();
             }
         } else if (getTypeOf(this.config.choices) === 'Function') {
             // If the choices are coming from a Promise, then resolve the promise and set it as data.
-            // Call goes here everytime is type is autocomplete and fromServer is true to populate list on input change.
+            // Call goes here everytime if type is autocomplete and fromServer is true to populate list on input change.
             // In case of select, call goes only once, for the first time to populate list.
             this.currentTimerId = setTimeout(function _populateListTimeout() {
                 if (this.currentTimerId) {
@@ -740,7 +744,7 @@
                             this.data = data;
                             this.isListPopulated = true;
                             if (!isInit) {
-                                this._render(!fromServer || this.type !== 'autocomplete');
+                                this._render();
                             }
                             this._setLoading(false);
                         }
@@ -840,8 +844,10 @@
             this.config.maxTags = 1;
         }
 
-        this._createTemplates();
-        this._createInput();
+        if (!this.isInitalized) {
+            this._createTemplates();
+            this._createInput();
+        }
 
         items = this.config.items;
         if (getTypeOf(items) !== 'Array') {
@@ -854,6 +860,7 @@
             return !this._pushItem({ key: key, value: value });
         }.bind(this));
 
+        this.isInitalized = true;
         allInitializedElements[tagsIdentityCount++] = this;
 
         if (this.config.fromServer && this.type !== 'autocomplete' && this.config.loadOnce) {
@@ -866,6 +873,18 @@
             _callCallback.call(this, fn);
         }
         return this;
+    };
+
+    reset = function reset() {
+        var i, item;
+        if (this.selectedItems) {
+            i = this.selectedItems.length - 1;
+            for (; i >= 0; i--) {
+                item = this.selectedItems[i];
+                this._removeElement(item.key);
+            }
+        }
+        this.init();
     };
 
     function TagsInput(element, userOptions) {
@@ -888,6 +907,7 @@
         }
         element.dataset.tagsId = tagsIdentityCount;
         userOptions = userOptions || {};
+        this.isInitalized = false;
         this.highlightPosition = -1;
         this.config = extend(defaultOptions, userOptions);
         this.element = getTypeOf(element) === 'String' ? document.querySelector(element) : element;
@@ -927,6 +947,7 @@
     TagsInput.prototype._searchList = _searchList;
     TagsInput.prototype._removeInput = _removeInput;
     TagsInput.prototype._setLoading = _setLoading;
+    TagsInput.prototype.reset = reset;
 
     return TagsInput;
 });
