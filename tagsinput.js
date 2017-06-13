@@ -854,6 +854,11 @@
             this._createInput();
             allInitializedElements[tagsIdentityCount++] = this;
             this.isInitalized = true;
+            document.addEventListener('click', _handleOutsideClick.bind(this));
+            if (getTypeOf(this.config.onInit) === 'Function') {
+                fn = this.config.onInit;
+                _callCallback.call(this, fn);
+            }
         }
 
         items = this.config.items;
@@ -871,11 +876,6 @@
             this._populateList(true);
         }
 
-        document.addEventListener('click', _handleOutsideClick.bind(this));
-        if (getTypeOf(this.config.onInit) === 'Function') {
-            fn = this.config.onInit;
-            _callCallback.call(this, fn);
-        }
         return this;
     };
 
