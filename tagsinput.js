@@ -205,7 +205,7 @@
     _render = function _render(isFilter) {
         var data, list, keyAttr, valAttr, itemEl, isListWrapperPresent, d, listWrapper, input, attributeToBeUsed, fn, item;
 
-        list = this._getTemplate('list');
+        list = _getTemplate.call(this, 'list');
         keyAttr = this.config.key;
         valAttr = this.config.value;
         if (this.config.searchBy === 'key') {
@@ -226,7 +226,7 @@
                     return;
                 }
                 item = { key: itemFromList[keyAttr].toString(), value: itemFromList[valAttr].toString() };
-                itemEl = this._getTemplate('listItem', index, item.key, item.value);
+                itemEl = _getTemplate.call(this, 'listItem', index, item.key, item.value);
                 if (_isItemPresentInList(item, this.selectedItems, 'key', 'key')) {
                     itemEl.classList.add(this.config.classes.optionSelected);
                 }
@@ -243,14 +243,14 @@
             d = document.createDocumentFragment();
             listWrapper = this.container.querySelector('[data-tags-element="multiselect-wrapper"]');
             if (!listWrapper) {
-                listWrapper = this._getTemplate('listWrapper');
+                listWrapper = _getTemplate.call(this, 'listWrapper');
                 isListWrapperPresent = false;
             }
 
             // Add Search box in multiselect dropdown if searchOption is enabled
             if (this.type === 'multi-select' && this.config.searchOption) {
                 if (!isListWrapperPresent) {
-                    input = this._getTemplate('input', this.config.placeholderSearch, this.config.classes.multiselectInput);
+                    input = _getTemplate.call(this, 'input', this.config.placeholderSearch, this.config.classes.multiselectInput);
                     input.addEventListener('keyup', _handleInputChange.bind(this));
                     listWrapper.appendChild(input);
                 }
@@ -299,29 +299,29 @@
         isTextSame = currentValue === prevValue;
         this.prevText = currentValue;
         if (!isTextSame) {
-            this._setLoading(false);
+            _setLoading.call(this, false);
             if (this.type === 'autocomplete') {
-                this._clearList();
+                _clearList.call(this);
                 this.currentTimerId = null;
                 if (currentValue.length >= this.config.minCharacters) {
                     if (!this.isListPopulated || this.config.fromServer) {
-                        this._populateList();
+                        _populateList.call(this);
                     } else if (!this.config.fromServer) {
-                        this._render(true);
+                        _render.call(this, true);
                     }
                 }
             } else if (this.type === 'single-select' || this.type === 'multi-select') {
                 if (this.type === 'single-select' && !this.prevText) {
                     if (this.selectedItems && this.selectedItems[0]) {
-                        this._removeElement(this.selectedItems[0].key);
+                        _removeElement.call(this, this.selectedItems[0].key);
                     }
                 }
                 if (this.config.searchOption) {
-                    this._searchList();
+                    _searchList.call(this);
                 }
             }
         } else if (keyMap[currentKey]) {
-            this._handleKeyPress(keyMap[currentKey]);
+            _handleKeyPress.call(this, keyMap[currentKey]);
         }
     };
 
@@ -333,28 +333,28 @@
 
     _searchList = function _searchList() {
         // Pass isSearching parameter as true to retain the search input in case of select dropdowns
-        this._clearList(true);
+        _clearList.call(this, true);
         // Pass isFilter true to local search for data in case of select list
-        this._render(true);
+        _render.call(this, true);
     };
 
     _handleMouseClick = function _handleMouseClick(e) {
-        this._selectElement();
+        _selectElement.call(this);
     };
 
     _handleKeyPress = function _handleKeyPress(key) {
         switch (key) {
             case 'ESCAPE':
-                this._handleEscape();
+                _handleEscape.call(this);
                 break;
             case 'ENTER':
-                this._handleEnter();
+                _handleEnter.call(this);
                 break;
             case 'UP_ARROW':
-                this._handleUpArrow();
+                _handleUpArrow.call(this);
                 break;
             case 'DOWN_ARROW':
-                this._handleDownArrow();
+                _handleDownArrow.call(this);
                 break;
         }
 
@@ -362,20 +362,20 @@
 
     _handleEscape = function _handleEscape() {
         // Close the list on Escape key press
-        this._clearList();
+        _clearList.call(this);
     };
 
     _handleEnter = function _handleEnter() {
         if (this.highlightPosition == -1) {
             if (this.type === 'autocomplete' && !this.isListVisible) {
                 if (!this.isListPopulated || this.config.fromServer) {
-                    this._populateList();
+                    _populateList.call(this);
                 } else if (!this.config.fromServer) {
-                    this._render(true);
+                    _render.call(this, true);
                 }
             }
         } else {
-            this._selectElement();
+            _selectElement.call(this);
         }
     };
 
@@ -389,7 +389,7 @@
                 this.highlightPosition -= 1;
             }
             // Pass isKeyPressed as true
-            this._hightlightElement(true);
+            _hightlightElement.call(this, true);
         }
     };
 
@@ -403,7 +403,7 @@
                 this.highlightPosition = 0;
             }
             // Pass isKeyPressed as true
-            this._hightlightElement(true);
+            _hightlightElement.call(this, true);
         }
     };
 
@@ -412,14 +412,14 @@
         current = e.currentTarget;
         index = current.dataset.index;
         this.highlightPosition = index;
-        this._hightlightElement();
+        _hightlightElement.call(this);
     };
 
     _handleMouseOut = function _handleMouseOut(e) {
         var current;
         current = e.currentTarget;
         this.highlightPosition = -1;
-        this._hightlightElement();
+        _hightlightElement.call(this);
     };
 
     _handleOutsideClick = function _handleOutsideClick(e) {
@@ -429,14 +429,14 @@
             $list = this.container.querySelector('[data-tags-element="list"]');
             if ($list) {
                 if (!this.container.contains(target)) {
-                    this._clearList();
+                    _clearList.call(this);
                 }
             }
         }
     };
 
     _handleBlurEvent = function _handleBlurEvent(e) {
-        this._clearInput();
+        _clearInput.call(this);
     };
 
     _handleInputFocus = function _handleInputFocus(e) {
@@ -448,13 +448,13 @@
         if (!this.isListVisible) {
             if ((maxTags > 0 && this.selectedItems.length < maxTags) || maxTags === -1 || this.type === 'single-select') {
                 if (!this.isListPopulated || !this.config.loadOnce) {
-                    this._populateList();
+                    _populateList.call(this);
                 } else {
-                    this._render();
+                    _render.call(this);
                 }
             }
         } else {
-            this._clearList();
+            _clearList.call(this);
         }
     };
 
@@ -535,7 +535,7 @@
             if (this.type === 'single-select') {
                 this.selectedItems = [];
             }
-            this._pushItem(selectedItem);
+            _pushItem.call(this, selectedItem);
         }
     };
 
@@ -560,9 +560,9 @@
                         $displayHolder.parentElement.removeChild($displayHolder);
                     }
                 }
-                $spanWrapper = this._getTemplate('selectedItemWrapper');
-                $span = this._getTemplate('selectedItem', selectedItem.key, selectedItem.value);
-                $remove = this._getTemplate('removeIcon');
+                $spanWrapper = _getTemplate.call(this, 'selectedItemWrapper');
+                $span = _getTemplate.call(this, 'selectedItem', selectedItem.key, selectedItem.value);
+                $remove = _getTemplate.call(this, 'removeIcon');
                 if (getTypeOf(this.config.onItemClick) === 'Function') {
                     $span.addEventListener('click', _handleItemClick.bind(this));
                 }
@@ -579,10 +579,10 @@
             }
         }
         if (this.config.maxTags > 0 && items.length === this.config.maxTags) {
-            this._clearList();
+            _clearList.call(this);
             if (this.type !== 'single-select') {
-                this._clearInput();
-                this._removeInput();
+                _clearInput.call(this);
+                _removeInput.call(this);
             }
             if (this.type === 'single-select') {
                 $input.value = items[0].value;
@@ -607,7 +607,7 @@
         }
         element = e.currentTarget.parentElement.querySelector('[data-tags-element="selected-item"]');
         key = element.dataset.key;
-        this._removeElement(key);
+        _removeElement.call(this, key);
     };
 
     _removeElement = function _removeElement(key) {
@@ -641,12 +641,12 @@
                 $itemWrapper.parentElement.removeChild($itemWrapper);
             }
         }
-        this._clearInput();
+        _clearInput.call(this);
         if (this.type !== 'multi-select' && this.config.maxTags > 0 && this.selectedItems.length < this.config.maxTags && !this.container.querySelector('[data-tags-element="input"]')) {
-            this._createInput();
+            _createInput.call(this);
         }
         else if (this.type === 'multi-select' && this.selectedItems.length === 0) {
-            this._createInput();
+            _createInput.call(this);
         }
         if (getTypeOf(this.config.onItemRemove) === 'Function') {
             fn = this.config.onItemRemove;
@@ -673,9 +673,9 @@
         if (this.container) {
             return;
         }
-        container = this._getTemplate('container');
-        wrapper = this._getTemplate('wrapper');
-        caret = this._getTemplate('caretSign');
+        container = _getTemplate.call(this, 'container');
+        wrapper = _getTemplate.call(this, 'wrapper');
+        caret = _getTemplate.call(this, 'caretSign');
         this.container = container;
         if (this.type !== 'autocomplete') {
             wrapper.appendChild(caret);
@@ -691,7 +691,7 @@
             }.bind(this));
         }
         this.container.appendChild(wrapper);
-        this.container.appendChild(this._getTemplate('loading', this.config.loadingText));
+        this.container.appendChild(_getTemplate.call(this, 'loading', this.config.loadingText));
         this.element.appendChild(this.container);
     }
 
@@ -700,14 +700,14 @@
         wrapper = this.container.querySelector('[data-tags-element="item-wrapper"]');
         placeholder = this.type === 'autocomplete' ? this.config.placeholderSearch : this.config.placeholder;
         if (this.type !== 'multi-select') {
-            input = this._getTemplate('input', placeholder);
+            input = _getTemplate.call(this, 'input', placeholder);
             input.addEventListener('keyup', _handleInputChange.bind(this));
             input.addEventListener('blur', _handleBlurEvent.bind(this));
             if (this.type === 'single-select') {
                 input.addEventListener('focus', _handleInputFocus.bind(this));
             }
         } else {
-            input = this._getTemplate('selectDisplay');
+            input = _getTemplate.call(this, 'selectDisplay');
         }
         wrapper.appendChild(input);
     };
@@ -727,7 +727,7 @@
             this.data = this.config.choices;
             this.isListPopulated = true;
             if (!isInit) {
-                this._render();
+                _render.call(this);
             }
         } else if (getTypeOf(this.config.choices) === 'Function') {
             // If the choices are coming from a Promise, then resolve the promise and set it as data.
@@ -736,7 +736,7 @@
             this.currentTimerId = setTimeout(function _populateListTimeout() {
                 if (this.currentTimerId) {
                     if (!isInit) {
-                        this._setLoading(true);
+                        _setLoading.call(this, true);
                     }
                 }
                 promiseToResolve = this.config.choices(val);
@@ -746,9 +746,9 @@
                             this.data = data;
                             this.isListPopulated = true;
                             if (!isInit) {
-                                this._render();
+                                _render.call(this);
                             }
-                            this._setLoading(false);
+                            _setLoading.call(this, false);
                         }
                     }.bind(this)).catch(function (error) {
                         console.error(error);
@@ -849,9 +849,9 @@
         }
 
         if (!this.isInitalized) {
-            this._createTemplates();
-            this._createContainer();
-            this._createInput();
+            _createTemplates.call(this);
+            _createContainer.call(this);
+            _createInput.call(this);
             allInitializedElements[tagsIdentityCount++] = this;
             this.isInitalized = true;
             document.addEventListener('click', _handleOutsideClick.bind(this));
@@ -869,11 +869,11 @@
         items.some(function (item) {
             key = item[this.config.key];
             value = item[this.config.value];
-            return !this._pushItem({ key: key, value: value });
+            return !_pushItem.call(this, { key: key, value: value });
         }.bind(this));
 
         if (this.config.fromServer && this.type !== 'autocomplete' && this.config.loadOnce) {
-            this._populateList(true);
+            _populateList.call(this, true);
         }
 
         return this;
@@ -885,7 +885,7 @@
             i = this.selectedItems.length - 1;
             for (; i >= 0; i--) {
                 item = this.selectedItems[i];
-                this._removeElement(item.key);
+                _removeElement.call(this, item.key);
             }
         }
         return this.init();
@@ -928,30 +928,6 @@
     TagsInput.prototype.init = init;
     TagsInput.prototype.getValues = getValues;
     TagsInput.prototype.setEnabled = setEnabled;
-    TagsInput.prototype._render = _render;
-    TagsInput.prototype._clearList = _clearList;
-    TagsInput.prototype._createTemplates = _createTemplates;
-    TagsInput.prototype._createContainer = _createContainer;
-    TagsInput.prototype._createInput = _createInput;
-    TagsInput.prototype._getTemplate = _getTemplate;
-    TagsInput.prototype._populateList = _populateList;
-    TagsInput.prototype._handleInputChange = _handleInputChange;
-    TagsInput.prototype._handleMouseOver = _handleMouseOver;
-    TagsInput.prototype._handleMouseOut = _handleMouseOut;
-    TagsInput.prototype._handleItemClick = _handleItemClick;
-    TagsInput.prototype._handleKeyPress = _handleKeyPress;
-    TagsInput.prototype._handleEscape = _handleEscape;
-    TagsInput.prototype._handleEnter = _handleEnter;
-    TagsInput.prototype._handleDownArrow = _handleDownArrow;
-    TagsInput.prototype._handleUpArrow = _handleUpArrow;
-    TagsInput.prototype._hightlightElement = _hightlightElement;
-    TagsInput.prototype._pushItem = _pushItem;
-    TagsInput.prototype._selectElement = _selectElement;
-    TagsInput.prototype._removeElement = _removeElement;
-    TagsInput.prototype._clearInput = _clearInput;
-    TagsInput.prototype._searchList = _searchList;
-    TagsInput.prototype._removeInput = _removeInput;
-    TagsInput.prototype._setLoading = _setLoading;
     TagsInput.prototype.reset = reset;
 
     return TagsInput;
