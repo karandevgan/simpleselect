@@ -8,7 +8,7 @@
     }
 })(this, function () {
     'use strict';
-    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount, assignDeep, getTypeOf, _createTemplates, _getTemplate, _render, _clearList, _handleInputChange, _searchList, _handleMouseClick, _handleKeyPress, _handleEscape, _handleEnter, _handleUpArrow, _handleDownArrow, _handleMouseOver, _handleMouseOut, _handleOutsideClick, _handleBlurEvent, _handleInputFocus, _handleMultiSelectFocus, _handleItemClick, _clearInput, _hightlightElement, _selectElement, _pushItem, _removeInput, _handleRemoveElement, _removeElement, _isItemPresentInList, _createInput, _populateList, getValues, setEnabled, _callCallback, _setLoading, reset, init;
+    var allInitializedElements, keyMap, defaultOptions, extend, strToEl, tagsIdentityCount, assignDeep, getTypeOf, _createTemplates, _getTemplate, _render, _clearList, _handleInputChange, _searchList, _handleMouseClick, _handleKeyPress, _handleEscape, _handleEnter, _handleUpArrow, _handleDownArrow, _handleMouseOver, _handleMouseOut, _handleOutsideClick, _handleBlurEvent, _handleInputFocus, _handleMultiSelectFocus, _handleItemClick, _clearInput, _hightlightElement, _selectElement, _pushItem, _removeInput, _handleRemoveElement, _removeElement, _isItemPresentInList, _createContainer, _createInput, _populateList, getValues, setEnabled, _callCallback, _setLoading, reset, init;
 
     tagsIdentityCount = 1;
     allInitializedElements = {};
@@ -602,6 +602,9 @@
 
     _handleRemoveElement = function _handleRemoveElement(e) {
         var element, key;
+        if (this.disabled) {
+            return;
+        }
         element = e.currentTarget.parentElement.querySelector('[data-tags-element="selected-item"]');
         key = element.dataset.key;
         this._removeElement(key);
@@ -609,13 +612,6 @@
 
     _removeElement = function _removeElement(key) {
         var $selectedItems, i, j, $item, $itemWrapper, index, $el, item, fn;
-        if (this.disabled) {
-            return;
-        }
-        if (getTypeOf(this.config.onItemRemove) === 'Function') {
-            fn = this.config.onItemRemove;
-            _callCallback.call(this, fn);
-        }
         index = -1;
         i = 0;
         for (; i < this.selectedItems.length; i++) {
@@ -652,6 +648,10 @@
         else if (this.type === 'multi-select' && this.selectedItems.length === 0) {
             this._createInput();
         }
+        if (getTypeOf(this.config.onItemRemove) === 'Function') {
+            fn = this.config.onItemRemove;
+            _callCallback.call(this, fn);
+        }
     };
 
     _isItemPresentInList = function _isItemPresentInList(item, list, keyForItem, keyForList) {
@@ -668,46 +668,48 @@
         return false;
     };
 
-    _createInput = function _createInput() {
-        var container, wrapper, placeholder, input, displayHolder, type, isInit, caret;
-        type = this.type;
-        caret = this._getTemplate('caretSign');
-        if (!this.container) { // If list is initialized for the first time
-            container = this._getTemplate('container');
-            wrapper = this._getTemplate('wrapper');
-            isInit = true;
-            this.container = container;
-        } else {
-            isInit = false;
-            wrapper = this.container.querySelector('[data-tags-element="item-wrapper"]');
+    _createContainer = function _createContainer() {
+        var container, wrapper, input, caret;
+        if (this.container) {
+            return;
         }
+        container = this._getTemplate('container');
+        wrapper = this._getTemplate('wrapper');
+        caret = this._getTemplate('caretSign');
+        this.container = container;
+        if (this.type !== 'autocomplete') {
+            wrapper.appendChild(caret);
+        }
+        if (this.type === 'multi-select') {
+            wrapper.addEventListener('click', _handleMultiSelectFocus.bind(this));
+        } else {
+            wrapper.addEventListener('click', function () {
+                input = this.container.querySelector('[data-tags-element="input"]');
+                if (input) {
+                    input.focus();
+                }
+            }.bind(this));
+        }
+        this.container.appendChild(wrapper);
+        this.container.appendChild(this._getTemplate('loading', this.config.loadingText));
+        this.element.appendChild(this.container);
+    }
+
+    _createInput = function _createInput() {
+        var wrapper, placeholder, input;
+        wrapper = this.container.querySelector('[data-tags-element="item-wrapper"]');
         placeholder = this.type === 'autocomplete' ? this.config.placeholderSearch : this.config.placeholder;
         if (this.type !== 'multi-select') {
             input = this._getTemplate('input', placeholder);
-            wrapper.appendChild(input);
             input.addEventListener('keyup', _handleInputChange.bind(this));
             input.addEventListener('blur', _handleBlurEvent.bind(this));
             if (this.type === 'single-select') {
                 input.addEventListener('focus', _handleInputFocus.bind(this));
-                caret.addEventListener('click', function () {
-                    input.focus();
-                });
-                wrapper.appendChild(caret);
             }
         } else {
-            displayHolder = this._getTemplate('selectDisplay');
-            if (isInit) {
-                wrapper.addEventListener('click', _handleMultiSelectFocus.bind(this));
-                wrapper.appendChild(displayHolder);
-                wrapper.appendChild(caret);
-            }
+            input = this._getTemplate('selectDisplay');
         }
-
-        if (isInit) {
-            this.container.appendChild(wrapper);
-            this.container.appendChild(this._getTemplate('loading', this.config.loadingText));
-            this.element.appendChild(this.container);
-        }
+        wrapper.appendChild(input);
     };
 
     _populateList = function _populateList(isInit) {
@@ -803,6 +805,8 @@
             }
             $input.placeholder = !!!isEnabled ? '' : enabledPlaceholderText;
         }
+
+        return this;
     };
 
     _callCallback = function _callCallback(fn) {
@@ -846,7 +850,10 @@
 
         if (!this.isInitalized) {
             this._createTemplates();
+            this._createContainer();
             this._createInput();
+            allInitializedElements[tagsIdentityCount++] = this;
+            this.isInitalized = true;
         }
 
         items = this.config.items;
@@ -859,9 +866,6 @@
             value = item[this.config.value];
             return !this._pushItem({ key: key, value: value });
         }.bind(this));
-
-        this.isInitalized = true;
-        allInitializedElements[tagsIdentityCount++] = this;
 
         if (this.config.fromServer && this.type !== 'autocomplete' && this.config.loadOnce) {
             this._populateList(true);
@@ -884,7 +888,7 @@
                 this._removeElement(item.key);
             }
         }
-        this.init();
+        return this.init();
     };
 
     function TagsInput(element, userOptions) {
@@ -927,6 +931,7 @@
     TagsInput.prototype._render = _render;
     TagsInput.prototype._clearList = _clearList;
     TagsInput.prototype._createTemplates = _createTemplates;
+    TagsInput.prototype._createContainer = _createContainer;
     TagsInput.prototype._createInput = _createInput;
     TagsInput.prototype._getTemplate = _getTemplate;
     TagsInput.prototype._populateList = _populateList;
